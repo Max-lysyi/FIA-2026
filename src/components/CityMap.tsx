@@ -271,44 +271,49 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
   const isResolvedSelected = selectedIncident?.status === 'resolved';
 
   return (
-    <div className="relative w-full h-full">
-      <div ref={containerRef} className="w-full h-full" />
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
 
-      {/* Before/After slider triggers immediately on select */}
+      {/* Before/After slider — shown when resolved incident selected */}
       {isResolvedSelected && selectedIncident?.beforePhoto && selectedIncident?.afterPhoto && (
-        <div className="absolute inset-0 flex items-end justify-start z-50 pointer-events-none p-6">
-          <div className="glass-card p-4 w-80 pointer-events-auto fade-in" style={{ background: 'var(--bg-card)' }}>
-            <div className="flex items-center justify-between mb-3">
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-start', zIndex: 50, padding: 24, pointerEvents: 'none' }}>
+          <div className="glass-card" style={{ padding: 16, width: 320, pointerEvents: 'auto', background: 'var(--bg-card)', borderRadius: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <div>
-                <h4 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{selectedIncident.title}</h4>
-                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{selectedIncident.location}</p>
+                <h4 style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)' }}>{selectedIncident.title}</h4>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{selectedIncident.location}</p>
               </div>
               <button
                 onClick={() => onSelectIncident(null)}
-                className="w-7 h-7 rounded-full flex items-center justify-center text-sm"
-                style={{ background: 'var(--bg-glass)', color: 'var(--text-secondary)' }}
+                style={{ width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, background: 'var(--bg-glass)', color: 'var(--text-secondary)', border: 'none', cursor: 'pointer' }}
               >
                 ✕
               </button>
             </div>
             <BeforeAfterSlider beforeSrc={selectedIncident.beforePhoto} afterSrc={selectedIncident.afterPhoto} />
-            <p className="text-xs mt-2 text-center" style={{ color: 'var(--text-muted)' }}>← Перетягніть →</p>
+            <p style={{ fontSize: 11, marginTop: 8, textAlign: 'center', color: 'var(--text-muted)' }}>← Перетягніть →</p>
           </div>
         </div>
       )}
 
       {/* Legend */}
-      <div className="absolute bottom-5 left-5 glass-card px-4 py-3 flex flex-col gap-2 z-10">
+      <div
+        className="glass-card cs-map-legend"
+        style={{ position: 'absolute', bottom: 20, left: 20, padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8, zIndex: 10 }}
+      >
         {Object.entries(CATEGORY_CONFIG).map(([k, cfg]) => (
-          <div key={k} className="flex items-center gap-2.5 text-xs" style={{ color: 'var(--text-secondary)' }}>
-            <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: cfg.markerColor, boxShadow: `0 0 6px ${cfg.markerColor}70` }} />
+          <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, color: 'var(--text-secondary)' }}>
+            <div style={{ width: 10, height: 10, borderRadius: '50%', flexShrink: 0, background: cfg.markerColor, boxShadow: `0 0 6px ${cfg.markerColor}70` }} />
             {cfg.label}
           </div>
         ))}
       </div>
 
-      {/* Zoom info */}
-      <div className="absolute top-4 right-14 glass-card px-3 py-1.5 text-xs z-10" style={{ color: 'var(--text-muted)' }}>
+      {/* Zoom level info */}
+      <div
+        className="glass-card"
+        style={{ position: 'absolute', top: 16, right: 56, padding: '6px 12px', fontSize: 11, zIndex: 10, color: 'var(--text-muted)' }}
+      >
         {zoom < ZOOM_SINGLE_CLUSTER ? '🔵 Загальний кластер' : zoom >= ZOOM_INDIVIDUAL ? '📍 Окремі маркери' : `🔢 Кластери (zoom ${zoom})`}
       </div>
     </div>

@@ -21,83 +21,56 @@ const CityModal: React.FC<CityModalProps> = ({ isOpen, currentCityId, onSelect, 
 
   return (
     <>
-      {/* Overlay */}
-      <div
-        className="fixed inset-0 z-[9998]"
-        style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}
-        onClick={onClose}
-      />
+      {/* Overlay — always on top of Leaflet */}
+      <div className="cs-city-modal-overlay" onClick={onClose} />
 
       {/* Modal */}
-      <div
-        className="fixed z-[9999] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md fade-in"
-        style={{
-          background: 'var(--bg-secondary)',
-          border: '1px solid var(--border-color-strong)',
-          borderRadius: 20,
-          boxShadow: '0 24px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,242,254,0.1)',
-        }}
-      >
+      <div className="cs-city-modal fade-in">
         {/* Header */}
-        <div
-          className="px-6 py-4 flex items-center justify-between"
-          style={{ borderBottom: '1px solid var(--border-color)' }}
-        >
-          <div className="flex items-center gap-3">
+        <div className="cs-city-modal__header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{ background: 'var(--accent-dim)', border: '1px solid var(--accent)40' }}
+              style={{
+                width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'var(--accent-dim)', border: '1px solid rgba(0,242,254,0.3)',
+              }}
             >
               <IconGlobe size={18} color="var(--accent)" />
             </div>
             <div>
-              <h2 className="font-bold text-base" style={{ color: 'var(--text-primary)' }}>
-                Оберіть місто
-              </h2>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                Завантажує інциденти обраного міста
-              </p>
+              <h2 style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>Оберіть місто</h2>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>Завантажує інциденти обраного міста</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-xl flex items-center justify-center text-sm transition-all duration-200 hover:opacity-70"
             style={{
-              background: 'var(--bg-glass)',
-              color: 'var(--text-secondary)',
-              border: '1px solid var(--border-color)',
+              width: 32, height: 32, borderRadius: 10, border: '1px solid var(--border-color)',
+              background: 'var(--bg-glass)', color: 'var(--text-secondary)',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13,
             }}
           >
             ✕
           </button>
         </div>
 
-        {/* Cities list */}
-        <div className="p-4 flex flex-col gap-2">
+        {/* City list */}
+        <div className="cs-city-modal__list">
           {CITIES.map((city) => {
             const stats = CITY_STATS[city.id];
             const isActive = city.id === currentCityId;
-
             return (
               <button
                 key={city.id}
                 onClick={() => { onSelect(city); onClose(); }}
-                className="w-full flex items-center gap-4 p-4 rounded-2xl text-left transition-all duration-200 hover:scale-[1.01]"
-                style={{
-                  background: isActive ? 'var(--accent-dim)' : 'var(--bg-glass)',
-                  border: isActive
-                    ? '1px solid var(--accent)'
-                    : '1px solid var(--border-color)',
-                  boxShadow: isActive ? '0 0 20px var(--accent)15' : 'none',
-                }}
+                className={`cs-city-item${isActive ? ' cs-city-item--active' : ''}`}
               >
-                {/* City icon */}
+                {/* Icon */}
                 <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 text-lg font-bold"
                   style={{
-                    background: isActive
-                      ? 'linear-gradient(135deg, #00F2FE, #3B82F6)'
-                      : 'var(--bg-card)',
+                    width: 44, height: 44, borderRadius: 12, display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', flexShrink: 0, fontSize: 14, fontWeight: 800,
+                    background: isActive ? 'linear-gradient(135deg, #00F2FE, #3B82F6)' : 'var(--bg-secondary)',
                     border: isActive ? 'none' : '1px solid var(--border-color)',
                     color: isActive ? '#fff' : 'var(--text-muted)',
                     boxShadow: isActive ? '0 0 16px rgba(0,242,254,0.3)' : 'none',
@@ -106,52 +79,43 @@ const CityModal: React.FC<CityModalProps> = ({ isOpen, currentCityId, onSelect, 
                   {city.name.slice(0, 2)}
                 </div>
 
-                {/* City info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-bold text-sm" style={{ color: isActive ? 'var(--accent)' : 'var(--text-primary)' }}>
+                {/* Info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: isActive ? 'var(--accent)' : 'var(--text-primary)' }}>
                       {city.name}
                     </span>
                     {isActive && (
-                      <span
-                        className="text-xs px-2 py-0.5 rounded-full font-medium"
-                        style={{ background: 'var(--accent)20', color: 'var(--accent)' }}
-                      >
+                      <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, background: 'rgba(0,242,254,0.12)', color: 'var(--accent)' }}>
                         активне
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 mb-2">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 6 }}>
                     <IconPin size={11} color="var(--text-muted)" />
-                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{city.region}</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{city.region}</span>
                   </div>
-                  {/* Stats */}
-                  <div className="flex items-center gap-3 text-xs">
+                  <div style={{ display: 'flex', gap: 12, fontSize: 11 }}>
                     <span style={{ color: 'var(--text-secondary)' }}>
-                      <span className="font-semibold" style={{ color: 'var(--accent)' }}>{stats.incidents}</span> інцидентів
+                      <strong style={{ color: 'var(--accent)' }}>{stats.incidents}</strong> інцидентів
                     </span>
-                    <span
-                      className="flex items-center gap-1"
-                      style={{ color: '#EF4444' }}
-                    >
-                      <span className="font-semibold">{stats.critical}</span> критичних
+                    <span style={{ color: '#EF4444' }}>
+                      <strong>{stats.critical}</strong> критичних
                     </span>
                   </div>
                 </div>
 
-                {/* Arrow */}
                 <IconChevronRight size={16} color={isActive ? 'var(--accent)' : 'var(--text-muted)'} />
               </button>
             );
           })}
         </div>
 
-        {/* Footer note */}
+        {/* Footer */}
         <div
-          className="px-6 py-3 text-xs text-center rounded-b-[20px]"
           style={{
-            borderTop: '1px solid var(--border-color)',
-            color: 'var(--text-muted)',
+            padding: '12px 20px', borderTop: '1px solid var(--border-color)',
+            textAlign: 'center', fontSize: 11, color: 'var(--text-muted)',
             background: 'var(--bg-glass)',
           }}
         >

@@ -22,7 +22,6 @@ const MoonIcon = () => (
 );
 
 interface ThemeToggleProps {
-  /** When true, renders as a compact icon button for the sidebar */
   compact?: boolean;
 }
 
@@ -34,11 +33,14 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({ compact = false }) => {
       <button
         onClick={toggleTheme}
         title={isDark ? 'Світла тема' : 'Темна тема'}
-        className="w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-200 hover:scale-105"
         style={{
+          width: 42, height: 42, borderRadius: 14,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: isDark ? 'rgba(245,158,11,0.12)' : 'rgba(99,102,241,0.12)',
           border: isDark ? '1px solid rgba(245,158,11,0.3)' : '1px solid rgba(99,102,241,0.3)',
           color: isDark ? '#F59E0B' : '#6366F1',
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
         }}
       >
         {isDark ? <SunIcon /> : <MoonIcon />}
@@ -49,16 +51,20 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({ compact = false }) => {
   return (
     <button
       onClick={toggleTheme}
-      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 hover:scale-105"
+      title={isDark ? 'Світла тема' : 'Темна тема'}
       style={{
+        display: 'flex', alignItems: 'center', gap: 6,
+        padding: '6px 14px', borderRadius: 50,
+        fontSize: 12, fontWeight: 600,
         background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
         border: '1px solid var(--border-color-strong)',
         color: isDark ? '#F59E0B' : '#6366F1',
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
       }}
-      title={isDark ? 'Світла тема' : 'Темна тема'}
     >
       {isDark ? <SunIcon /> : <MoonIcon />}
-      <span className="hidden sm:inline">{isDark ? 'Світла' : 'Темна'}</span>
+      <span style={{ display: 'none' }} className="theme-label">{isDark ? 'Світла' : 'Темна'}</span>
     </button>
   );
 };

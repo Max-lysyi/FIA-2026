@@ -7,128 +7,113 @@ const ProfileView: React.FC = () => {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (nameInput.trim()) {
-      loginSimulate(nameInput.trim());
-    }
+    if (nameInput.trim()) loginSimulate(nameInput.trim());
   };
 
   return (
-    <div className="h-full overflow-y-auto px-8 py-8 md:px-12 md:py-10 bg-[var(--bg-primary)] text-[var(--text-primary)]">
-      <div className="max-w-4xl mx-auto flex flex-col gap-8">
-        
-        {/* Title */}
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight mb-2">Мій акаунт</h1>
-          <p className="text-sm opacity-75" style={{ color: 'var(--text-secondary)' }}>
-            Керуйте своїми балами еко-активіста та переглядайте історію повідомлень
-          </p>
-        </div>
+    <div className="cs-scroll-page">
+      <div style={{ maxWidth: 900, margin: '0 auto' }}>
+        <h1 className="cs-page-title">Мій акаунт</h1>
+        <p className="cs-page-subtitle">Керуйте балами еко-активіста та переглядайте історію повідомлень</p>
 
         {!user?.isLoggedIn ? (
-          /* Login Form */
-          <div className="glass-card p-8 rounded-3xl border max-w-md mx-auto w-full flex flex-col gap-6" style={{ borderColor: 'var(--border-color)' }}>
-            <div className="text-center">
-              <h2 className="text-xl font-bold">Вхід у кабінет</h2>
-              <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
+          <div className="cs-login-card">
+            <div style={{ textAlign: 'center' }}>
+              <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 6 }}>Вхід у кабінет</h2>
+              <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
                 Авторизуйтеся, щоб накопичувати бали за звіти про проблеми
               </p>
             </div>
 
-            <form onSubmit={handleLogin} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Ім'я користувача</label>
+            <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <label className="cs-form-label">Ім'я користувача</label>
                 <input
+                  className="cs-form-input"
                   type="text"
                   value={nameInput}
-                  onChange={(e) => setNameInput(e.target.value)}
+                  onChange={e => setNameInput(e.target.value)}
                   placeholder="Олександр Коваль"
-                  className="px-4 py-2.5 rounded-xl text-sm outline-none border bg-[var(--bg-secondary)]"
-                  style={{ borderColor: 'var(--border-color-strong)' }}
                 />
               </div>
-
-              <button type="submit" className="btn-neon w-full py-3 rounded-xl text-xs font-bold uppercase tracking-wider">
+              <button type="submit" className="cs-btn-neon" style={{ width: '100%' }}>
                 Авторизуватися
               </button>
             </form>
 
-            <div className="flex items-center my-1">
-              <div className="flex-1 h-[1px]" style={{ background: 'var(--border-color)' }} />
-              <span className="text-[10px] uppercase font-bold px-3" style={{ color: 'var(--text-muted)' }}>Або</span>
-              <div className="flex-1 h-[1px]" style={{ background: 'var(--border-color)' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ flex: 1, height: 1, background: 'var(--border-color)' }} />
+              <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Або</span>
+              <div style={{ flex: 1, height: 1, background: 'var(--border-color)' }} />
             </div>
 
             <button
               onClick={() => loginSimulate('Гість Google')}
-              className="w-full py-3 rounded-xl text-xs font-bold border transition-all hover:bg-[var(--bg-glass-hover)]"
-              style={{ borderColor: 'var(--border-color-strong)' }}
+              className="cs-btn-ghost"
+              style={{ width: '100%' }}
             >
               🔑 Увійти через Google
             </button>
           </div>
         ) : (
-          /* User Profile Dashboard */
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            
-            {/* User Info & Points Card */}
-            <div className="glass-card p-6 rounded-2xl border flex flex-col gap-5 md:col-span-1" style={{ borderColor: 'var(--border-color)' }}>
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-full flex items-center justify-center font-bold text-xl text-white bg-gradient-to-r from-teal-400 to-indigo-500">
+          <div className="cs-profile-grid">
+            {/* Left: avatar & stats */}
+            <div className="cs-profile-card">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div className="cs-profile-avatar">
                   {user.name.slice(0, 2).toUpperCase()}
                 </div>
                 <div>
-                  <h3 className="text-base font-bold">{user.name}</h3>
-                  <span className="text-xs text-emerald-400">● Активний громадянин</span>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>{user.name}</h3>
+                  <span style={{ fontSize: 12, color: '#10B981' }}>● Активний громадянин</span>
                 </div>
               </div>
 
-              {/* Total points */}
-              <div className="p-4 rounded-xl text-center bg-[var(--bg-secondary)] border" style={{ borderColor: 'var(--border-color)' }}>
-                <span className="text-3xl font-extrabold text-cyan-400">{user.points}</span>
-                <span className="text-xs block mt-1" style={{ color: 'var(--text-muted)' }}>Бали еко-активіста</span>
+              <div style={{ padding: '20px', borderRadius: 16, textAlign: 'center', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+                <span style={{ fontSize: 36, fontWeight: 900, color: 'var(--accent)' }}>{user.points}</span>
+                <span style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>Бали еко-активіста</span>
               </div>
 
-              {/* Stats info */}
-              <div className="flex flex-col gap-2.5 text-xs text-[var(--text-secondary)]">
-                <div className="flex justify-between">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 12, color: 'var(--text-secondary)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span>Подано скарг:</span>
-                  <span className="font-bold text-[var(--text-primary)]">{(user.history.length - 1) || 3}</span>
+                  <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{Math.max(user.history.length - 1, 3)}</span>
                 </div>
-                <div className="flex justify-between">
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span>Рейтинг міста:</span>
-                  <span className="font-bold text-[var(--text-primary)]">ТОП-15 активістів</span>
+                  <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>ТОП-15 активістів</span>
                 </div>
               </div>
 
               <button
                 onClick={logoutSimulate}
-                className="w-full py-2.5 mt-2 rounded-xl text-xs font-semibold border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-all"
+                style={{
+                  width: '100%', padding: '10px', borderRadius: 12,
+                  fontSize: 12, fontWeight: 600,
+                  border: '1px solid rgba(239,68,68,0.3)',
+                  color: '#EF4444', background: 'transparent', cursor: 'pointer',
+                  transition: 'background 0.2s ease',
+                }}
               >
                 Вийти з акаунту
               </button>
             </div>
 
-            {/* Points History Card */}
-            <div className="glass-card p-6 rounded-2xl border flex flex-col gap-4 md:col-span-2" style={{ borderColor: 'var(--border-color)' }}>
-              <h3 className="text-base font-bold">🏆 Нарахування балів активності</h3>
-              
-              <div className="flex flex-col gap-3 overflow-y-auto max-h-80">
+            {/* Right: history */}
+            <div className="cs-profile-card">
+              <h3 style={{ fontSize: 15, fontWeight: 700 }}>🏆 Нарахування балів активності</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, overflowY: 'auto', maxHeight: 320 }}>
                 {user.history.map((h, i) => (
-                  <div
-                    key={i}
-                    className="flex justify-between items-center p-3 rounded-xl bg-[var(--bg-secondary)] border"
-                    style={{ borderColor: 'var(--border-color)' }}
-                  >
-                    <div className="flex flex-col gap-1">
-                      <span className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>{h.reason}</span>
-                      <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{h.date}</span>
+                  <div key={i} className="cs-history-item">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.reason}</span>
+                      <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{h.date}</span>
                     </div>
-                    <span className="text-xs font-extrabold text-emerald-400">+{h.points} балів</span>
+                    <span style={{ fontSize: 12, fontWeight: 900, color: '#10B981', flexShrink: 0 }}>+{h.points} б</span>
                   </div>
                 ))}
               </div>
             </div>
-
           </div>
         )}
       </div>

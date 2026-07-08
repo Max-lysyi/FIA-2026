@@ -6,7 +6,7 @@ interface AnalyticsViewProps {
   incidents: Incident[];
 }
 
-// Simple donut/pie chart using SVG
+// Donut chart using SVG
 const PieChart: React.FC<{ data: { label: string; value: number; color: string }[] }> = ({ data }) => {
   const total = data.reduce((s, d) => s + d.value, 0);
   let cumAngle = -90;
@@ -29,7 +29,6 @@ const PieChart: React.FC<{ data: { label: string; value: number; color: string }
     return {
       ...d,
       path: `M${xi1} ${yi1} L${x1} ${y1} A${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} L${xi2} ${yi2} A${innerR} ${innerR} 0 ${largeArc} 0 ${xi1} ${yi1} Z`,
-      pct: Math.round(d.value / total * 100),
     };
   });
 
@@ -49,25 +48,19 @@ const PieChart: React.FC<{ data: { label: string; value: number; color: string }
   );
 };
 
-// Mini bar chart
+// Mini bar
 const MiniBar: React.FC<{ label: string; value: number; max: number; color: string }> = ({ label, value, max, color }) => (
-  <div className="flex items-center gap-3">
-    <div
-      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-      style={{ background: color, boxShadow: `0 0 6px ${color}80` }}
-    />
-    <span className="text-xs w-24 flex-shrink-0" style={{ color: 'var(--text-secondary)' }}>{label}</span>
-    <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--border-color)' }}>
-      <div
-        className="h-full rounded-full"
-        style={{ width: `${(value / max) * 100}%`, background: color, boxShadow: `0 0 8px ${color}60` }}
-      />
+  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+    <div style={{ width: 10, height: 10, borderRadius: '50%', flexShrink: 0, background: color, boxShadow: `0 0 6px ${color}80` }} />
+    <span style={{ fontSize: 12, width: 80, flexShrink: 0, color: 'var(--text-secondary)' }}>{label}</span>
+    <div style={{ flex: 1, height: 6, borderRadius: 4, overflow: 'hidden', background: 'var(--border-color)' }}>
+      <div style={{ width: `${(value / max) * 100}%`, height: '100%', borderRadius: 4, background: color, boxShadow: `0 0 8px ${color}60` }} />
     </div>
-    <span className="text-xs font-semibold w-8 text-right" style={{ color: 'var(--text-primary)' }}>{value}</span>
+    <span style={{ fontSize: 11, fontWeight: 600, width: 32, textAlign: 'right', color: 'var(--text-primary)' }}>{value}</span>
   </div>
 );
 
-// Sparkline-style week chart
+// Sparkline
 const WeekChart: React.FC<{ data: number[]; color: string }> = ({ data, color }) => {
   const max = Math.max(...data);
   const w = 280, h = 60;
@@ -83,14 +76,12 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
   const total = incidents.length * 18;
   const critical = incidents.filter(i => i.priority === 'critical').length;
 
-  // Category breakdown
   const catCounts = Object.keys(CATEGORY_CONFIG).map(key => {
     const cfg = CATEGORY_CONFIG[key as keyof typeof CATEGORY_CONFIG];
     const count = incidents.filter(i => i.category === key).length;
     return { label: cfg.label, value: count || 1, color: cfg.markerColor };
   });
 
-  // Resolution times (mock)
   const resolutionTimes = [
     { label: 'ЖКГ', value: 375, color: '#3B82F6' },
     { label: 'Екологія', value: 198, color: '#10B981' },
@@ -100,65 +91,70 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
   ];
   const maxTime = Math.max(...resolutionTimes.map(r => r.value));
 
-  // Top locations
   const topLocations = incidents
     .sort((a, b) => b.complaintsCount - a.complaintsCount)
     .slice(0, 4)
     .map(i => ({ label: i.location, value: i.complaintsCount }));
 
-  // Weekly trend mock data
   const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
   const trendData = [45, 78, 62, 95, 80, 55, 70];
 
+  const topMetrics = [
+    { icon: '📊', value: total, label: 'Усього інцидентів за добу', color: 'var(--accent)' },
+    { icon: <IconAI size={18} color="#10B981" />, value: '100%', label: 'Оброблено ШІ автоматично', color: '#10B981' },
+    { icon: <IconWarning size={18} color="#EF4444" />, value: critical, label: 'Критичні кризи (Потребують уваги)', color: '#EF4444', pulse: true },
+  ];
+
   return (
-    <div className="h-full overflow-y-auto px-6 py-6" style={{ color: 'var(--text-primary)' }}>
-      <div className="max-w-5xl mx-auto">
+    <div className="cs-scroll-page">
+      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+        <h1 className="cs-page-title">Аналітика</h1>
+        <p className="cs-page-subtitle">AI-прооброблений канал пайплайн</p>
 
-        {/* Page title */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold mb-1">Аналітика</h1>
-          <p style={{ color: 'var(--text-muted)' }}>AI-прооброблений канал пайплайн</p>
-        </div>
-
-        {/* ── Top metrics ──────────────────────────────────────────────── */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          {[
-            { icon: '📊', value: total, label: 'Усього інцидентів за добу', color: 'var(--accent)' },
-            { icon: <IconAI size={18} color="#10B981" />, value: '100%', label: 'Оброблено ШІ автоматично', color: '#10B981' },
-            { icon: <IconWarning size={18} color="#EF4444" />, value: critical, label: 'Критичні кризи (Потребують уваги)', color: '#EF4444', pulse: true },
-          ].map((m, i) => (
-            <div key={i} className="glass-card metric-card px-5 py-4 flex items-center gap-4">
+        {/* Top metrics */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
+          {topMetrics.map((m, i) => (
+            <div
+              key={i}
+              className="cs-glass-card"
+              style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16 }}
+            >
               <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-lg"
-                style={{ background: `${m.color}18`, border: `1px solid ${m.color}30` }}
+                style={{
+                  width: 44, height: 44, borderRadius: 14,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0, fontSize: 18,
+                  background: `${m.color}18`,
+                  border: `1px solid ${m.color}30`,
+                }}
               >
                 {m.icon}
               </div>
               <div>
-                <div className="text-2xl font-bold" style={{ color: m.color }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: m.color, display: 'flex', alignItems: 'center', gap: 6 }}>
                   {m.value}
-                  {m.pulse && <span className="inline-block w-2 h-2 rounded-full ml-2 align-middle" style={{ background: m.color, boxShadow: `0 0 8px ${m.color}`, animation: 'ping 1.5s ease infinite' }} />}
+                  {m.pulse && (
+                    <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: m.color, boxShadow: `0 0 8px ${m.color}`, animation: 'live-ping 1.5s ease infinite' }} />
+                  )}
                 </div>
-                <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{m.label}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{m.label}</div>
               </div>
             </div>
           ))}
         </div>
 
-        {/* ── Main grid ────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-3 gap-4 mb-4">
-          {/* Pie chart */}
-          <div className="glass-card p-5 col-span-1">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Розподіл за категоріями</h3>
-            </div>
-            <div className="flex items-center gap-4">
+        {/* Main grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 16, marginBottom: 16 }}>
+          {/* Pie */}
+          <div className="cs-glass-card" style={{ padding: 20 }}>
+            <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16 }}>Розподіл за категоріями</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
               <PieChart data={catCounts} />
-              <div className="flex flex-col gap-2">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {catCounts.map((c, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: c.color }} />
-                    <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{c.label}</span>
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 10, height: 10, borderRadius: 2, flexShrink: 0, background: c.color }} />
+                    <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{c.label}</span>
                   </div>
                 ))}
               </div>
@@ -166,34 +162,35 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
           </div>
 
           {/* Top locations */}
-          <div className="glass-card p-5 col-span-2">
-            <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-              ТОП-локації за критичними інцидентами
-            </h3>
-            <div className="flex flex-col gap-3">
+          <div className="cs-glass-card" style={{ padding: 20 }}>
+            <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16 }}>ТОП-локації за критичними інцидентами</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {topLocations.map((loc, i) => (
-                <div key={i} className="flex items-center gap-3">
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0"
-                    style={{ background: i === 0 ? 'rgba(239,68,68,0.15)' : 'var(--bg-glass)', color: i === 0 ? '#EF4444' : 'var(--text-muted)', border: '1px solid var(--border-color)' }}
+                    style={{
+                      width: 32, height: 32, borderRadius: 10,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 11, fontWeight: 800, flexShrink: 0,
+                      background: i === 0 ? 'rgba(239,68,68,0.15)' : 'var(--bg-glass)',
+                      color: i === 0 ? '#EF4444' : 'var(--text-muted)',
+                      border: '1px solid var(--border-color)',
+                    }}
                   >
                     {i + 1}
                   </div>
                   <IconPin size={14} color="var(--accent)" />
-                  <span className="flex-1 text-sm" style={{ color: 'var(--text-primary)' }}>{loc.label}</span>
-                  <div className="flex-1 h-1.5 rounded-full overflow-hidden mx-2" style={{ background: 'var(--border-color)' }}>
+                  <span style={{ flex: 1, fontSize: 13, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{loc.label}</span>
+                  <div style={{ width: 100, height: 6, borderRadius: 4, overflow: 'hidden', background: 'var(--border-color)' }}>
                     <div
-                      className="h-full rounded-full"
                       style={{
                         width: `${(loc.value / topLocations[0].value) * 100}%`,
+                        height: '100%', borderRadius: 4,
                         background: 'linear-gradient(90deg, #EF4444, #F97316)',
                       }}
                     />
                   </div>
-                  <span
-                    className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                    style={{ background: 'rgba(239,68,68,0.12)', color: '#EF4444' }}
-                  >
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: 'rgba(239,68,68,0.12)', color: '#EF4444', flexShrink: 0 }}>
                     ({loc.value})
                   </span>
                 </div>
@@ -202,14 +199,12 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
           </div>
         </div>
 
-        {/* ── Bottom grid ───────────────────────────────────────────────── */}
-        <div className="grid grid-cols-3 gap-4">
+        {/* Bottom grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
           {/* Resolution times */}
-          <div className="glass-card p-5 col-span-1">
-            <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-              Середній час вирішення (хв)
-            </h3>
-            <div className="flex flex-col gap-3">
+          <div className="cs-glass-card" style={{ padding: 20 }}>
+            <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16 }}>Середній час вирішення (хв)</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {resolutionTimes.map((rt, i) => (
                 <MiniBar key={i} label={rt.label} value={rt.value} max={maxTime} color={rt.color} />
               ))}
@@ -217,34 +212,30 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
           </div>
 
           {/* Weekly trend */}
-          <div className="glass-card p-5 col-span-1">
-            <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-              Тенденції за тиждень
-            </h3>
-            <div className="overflow-hidden">
+          <div className="cs-glass-card" style={{ padding: 20 }}>
+            <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16 }}>Тенденції за тиждень</h3>
+            <div style={{ overflow: 'hidden' }}>
               <WeekChart data={trendData} color="var(--accent)" />
-              <div className="flex justify-between mt-2">
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
                 {weekDays.map(d => (
-                  <span key={d} className="text-xs" style={{ color: 'var(--text-muted)' }}>{d}</span>
+                  <span key={d} style={{ fontSize: 11, color: 'var(--text-muted)' }}>{d}</span>
                 ))}
               </div>
             </div>
-            <div className="mt-3 flex items-center gap-3 flex-wrap">
+            <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 12 }}>
               {[{ label: 'ЖКГ', color: '#3B82F6' }, { label: 'Екологія', color: '#10B981' }, { label: 'Транспорт', color: '#F59E0B' }].map(t => (
-                <div key={t.label} className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full" style={{ background: t.color }} />
-                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{t.label}</span>
+                <div key={t.label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: t.color }} />
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{t.label}</span>
                 </div>
               ))}
             </div>
           </div>
 
           {/* AI efficiency */}
-          <div className="glass-card p-5 col-span-1">
-            <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-              Ефективність ШІ парсингу
-            </h3>
-            <div className="flex flex-col gap-3">
+          <div className="cs-glass-card" style={{ padding: 20 }}>
+            <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16 }}>Ефективність ШІ парсингу</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {[
                 { label: 'Класифікація', value: 100, color: '#10B981' },
                 { label: 'Пріоритизація', value: 95, color: '#10B981' },
@@ -252,13 +243,13 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
                 { label: 'Розпізнавання', value: 99, color: '#10B981' },
                 { label: 'ШІ парсинг', value: 100, color: '#10B981' },
               ].map((item, i) => (
-                <div key={i} className="flex items-center gap-2">
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <IconAI size={14} color={item.color} />
-                  <span className="flex-1 text-xs" style={{ color: 'var(--text-secondary)' }}>{item.label}</span>
-                  <div className="w-20 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--border-color)' }}>
-                    <div className="h-full rounded-full" style={{ width: `${item.value}%`, background: item.color }} />
+                  <span style={{ flex: 1, fontSize: 11, color: 'var(--text-secondary)' }}>{item.label}</span>
+                  <div style={{ width: 80, height: 6, borderRadius: 4, overflow: 'hidden', background: 'var(--border-color)' }}>
+                    <div style={{ width: `${item.value}%`, height: '100%', borderRadius: 4, background: item.color }} />
                   </div>
-                  <span className="text-xs font-semibold w-10 text-right" style={{ color: item.color }}>{item.value}%</span>
+                  <span style={{ fontSize: 11, fontWeight: 600, width: 36, textAlign: 'right', color: item.color }}>{item.value}%</span>
                 </div>
               ))}
             </div>

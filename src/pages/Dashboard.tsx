@@ -8,149 +8,132 @@ import ReportView from './ReportView';
 import AnalyticsView from './AnalyticsView';
 import ProfileView from './ProfileView';
 import SettingsView from './SettingsView';
+import CSLogo from '../components/CSLogo';
 import { type Incident, type City, CITIES, CITY_INCIDENTS } from '../data/incidents';
-import { IconGlobe, IconPin, IconSearch } from '../components/Icons';
+import { IconGlobe, IconPin, IconSearch, IconMap, IconAnalytics, IconUser, IconDashboard, IconSettings } from '../components/Icons';
+
+type MobileActiveView = SidebarView | 'feed';
 
 const Dashboard: React.FC = () => {
-  // ─── State ────────────────────────────────────────────────────────────
-  const [activeView, setActiveView]   = useState<SidebarView>('map');
-  const [isFeedOpen, setIsFeedOpen]   = useState(true);
+  const [activeView, setActiveView] = useState<SidebarView>('map');
+  const [isFeedOpen, setIsFeedOpen] = useState(true);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
-  const [isCityModalOpen, setIsCityModalOpen]   = useState(false);
+  const [isCityModalOpen, setIsCityModalOpen] = useState(false);
   const [currentCity, setCurrentCity] = useState<City>(CITIES[0]);
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Keep tracks of all incidents locally in the state to allow adding new ones dynamically
   const [allCityIncidents, setAllCityIncidents] = useState<Record<string, Incident[]>>(CITY_INCIDENTS);
 
-  const rawIncidents = allCityIncidents[currentCity.id] ?? [];
+  // Mobile specific view switcher state
+  const [mobileView, setMobileView] = useState<MobileActiveView>('map');
 
-  // Filtered incidents based on search query
+  const rawIncidents = allCityIncidents[currentCity.id] ?? [];
   const incidents = rawIncidents.filter(inc =>
     inc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     inc.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
     inc.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // When a user selects a city, switch back to map view and update state
   const handleCitySelect = (city: City) => {
     setCurrentCity(city);
     setSelectedIncident(null);
-    setActiveView('map'); // Switch to map automatically
+    setActiveView('map');
+    setMobileView('map');
   };
 
-  // Add new incident from the AI report view
   const handleAddIncident = (newInc: Incident) => {
-    setAllCityIncidents((prev) => {
-      const cityId = currentCity.id;
-      const currentList = prev[cityId] ?? [];
-      return {
-        ...prev,
-        [cityId]: [newInc, ...currentList],
-      };
-    });
+    setAllCityIncidents(prev => ({
+      ...prev,
+      [currentCity.id]: [newInc, ...(prev[currentCity.id] ?? [])],
+    }));
   };
 
-  // ─── Feed panel width ─────────────────────────────────────────────────
-  const FEED_WIDTH = 320;
+  const handleMobileNavClick = (view: MobileActiveView) => {
+    setMobileView(view);
+    if (view !== 'feed' && view !== 'map') {
+      setActiveView(view as SidebarView);
+    } else if (view === 'map') {
+      setActiveView('map');
+    }
+  };
+
+  const FEED_WIDTH = 308;
+  const criticalCount = incidents.filter(i => i.priority === 'critical').length;
 
   return (
-    <div
-      className="flex h-screen w-screen overflow-hidden bg-[var(--bg-primary)] text-[var(--text-primary)]"
-    >
-      {/* ═══ Sidebar (narrow icons) ════════════════════════════════════ */}
+    <div className="cs-app">
+      {/* ═══ Desktop Sidebar ═══════════════════════════════════════════ */}
       <Sidebar
         activeView={activeView}
-        onViewChange={(v) => {
-          setActiveView(v);
-        }}
+        onViewChange={(v) => { setActiveView(v); setMobileView(v); }}
         isFeedOpen={isFeedOpen}
         onFeedToggle={() => setIsFeedOpen(o => !o)}
       />
 
-      {/* ═══ Incident Feed (slides in/out) ═════════════════════════════ */}
+      {/* ═══ Mobile Top Header (from design reference) ═════════════════ */}
+      <header className="cs-m-header cs-mobile-only">
+        <div className="cs-m-header__logo" onClick={() => setIsCityModalOpen(true)} style={{ cursor: 'pointer' }}>
+          <CSLogo size={30} />
+          <span className="cs-m-header__title">{currentCity.name}</span>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>▼</span>
+        </div>
+        <div className="cs-m-header__profile" onClick={() => handleMobileNavClick('profile')} style={{ cursor: 'pointer' }}>
+          {CITIES[0].name.slice(0,2).toUpperCase()}
+        </div>
+      </header>
+
+      {/* ═══ Desktop Feed panel ════════════════════════════════════════ */}
       <div
-        className="flex flex-col overflow-hidden flex-shrink-0 transition-all duration-300 bg-[var(--bg-secondary)]"
+        className="cs-feed cs-desktop-only"
         style={{
           width: isFeedOpen ? FEED_WIDTH : 0,
           opacity: isFeedOpen ? 1 : 0,
-          borderRight: isFeedOpen ? '1px solid var(--border-color)' : 'none',
         }}
       >
-        {/* Feed header */}
-        <div
-          className="px-5 pt-6 pb-4 flex-shrink-0"
-          style={{ borderBottom: '1px solid var(--border-color)' }}
-        >
-          {/* Live indicator */}
-          <div className="flex items-center gap-2 mb-4">
-            <span
-              className="text-xs px-2.5 py-1 rounded-full font-semibold flex items-center gap-1.5"
-              style={{ background: 'rgba(16,185,129,0.12)', color: '#10B981', border: '1px solid rgba(16,185,129,0.25)' }}
-            >
-              <span
-                className="w-1.5 h-1.5 rounded-full inline-block flex-shrink-0"
-                style={{ background: '#10B981', boxShadow: '0 0 6px #10B981', animation: 'ping 2s ease infinite' }}
-              />
+        <div className="cs-feed__header">
+          <div style={{ marginBottom: 16 }}>
+            <span className="cs-feed__live">
+              <span className="cs-feed__live-dot" />
               LIVE
             </span>
           </div>
 
-          {/* City selector */}
-          <button
-            onClick={() => setIsCityModalOpen(true)}
-            className="flex items-center gap-3 mb-4 px-3 py-2.5 rounded-xl w-full text-left transition-all duration-200 hover:opacity-85"
-            style={{ background: 'var(--accent-dim)', border: '1px solid rgba(0,242,254,0.3)' }}
-          >
+          <button className="cs-feed__city-btn" onClick={() => setIsCityModalOpen(true)}>
             <IconGlobe size={16} color="var(--accent)" />
-            <div className="flex-1 min-w-0">
-              <span className="text-sm font-bold block" style={{ color: 'var(--accent)' }}>{currentCity.name}</span>
-              <div className="flex items-center gap-1 mt-0.5">
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <span className="cs-feed__city-name">{currentCity.name}</span>
+              <div className="cs-feed__city-region">
                 <IconPin size={10} color="var(--text-muted)" />
-                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{currentCity.region}</span>
+                <span>{currentCity.region}</span>
               </div>
             </div>
-            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>▼</span>
+            <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>▼</span>
           </button>
 
-          {/* Search bar inside feed */}
-          <div className="relative flex items-center mb-4">
-            <div className="absolute left-3 pointer-events-none text-[var(--text-muted)]">
-              <IconSearch size={14} />
-            </div>
+          <div className="cs-feed__search">
+            <span className="cs-feed__search-icon">
+              <IconSearch size={14} color="var(--text-muted)" />
+            </span>
             <input
+              className="cs-feed__search-input"
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={e => setSearchQuery(e.target.value)}
               placeholder="Пошук скарг та адрес..."
-              className="w-full pl-9 pr-3 py-2 rounded-xl text-xs outline-none border bg-[var(--bg-secondary)]"
-              style={{ borderColor: 'var(--border-color-strong)' }}
             />
             {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 text-xs opacity-50 hover:opacity-100"
-              >
-                ✕
-              </button>
+              <button className="cs-feed__search-clear" onClick={() => setSearchQuery('')}>✕</button>
             )}
           </div>
 
-          <h2 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>
-            Інтелектуальний фід
-          </h2>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            AI-прооброблений канал пайплайн
-          </p>
+          <p className="cs-feed__title">Інтелектуальний фід</p>
+          <p className="cs-feed__subtitle">AI-прооброблений канал пайплайн</p>
         </div>
 
-        {/* Metrics inside feed panel */}
-        <div className="flex-shrink-0 px-4 pt-4">
-          <MetricsBar incidents={incidents} compact />
+        <div className="cs-feed__metrics">
+          <MetricsBar incidents={incidents} />
         </div>
 
-        {/* Incident cards */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
+        <div className="cs-feed__list">
           <IncidentFeed
             incidents={incidents}
             selectedId={selectedIncident?.id ?? null}
@@ -159,47 +142,177 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* ═══ Main content area ══════════════════════════════════════════ */}
-      <div className="flex-1 min-w-0 relative overflow-hidden">
-        {activeView === 'map' && (
-          <CityMap
-            incidents={incidents}
-            city={currentCity}
-            selectedIncident={selectedIncident}
-            onSelectIncident={setSelectedIncident}
-          />
-        )}
+      {/* ═══ Main content ══════════════════════════════════════════════ */}
+      <div className="cs-main">
+        {/* ─── MAP VIEW ─── */}
+        {((!window.matchMedia('(max-width: 768px)').matches && activeView === 'map') || 
+          (window.matchMedia('(max-width: 768px)').matches && mobileView === 'map')) && (
+          <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+            {/* Mobile-only metrics on map (right phone on reference) */}
+            <div
+              className="cs-mobile-only"
+              style={{
+                position: 'absolute', top: 12, left: 12, right: 12, zIndex: 90,
+                display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8,
+                pointerEvents: 'none',
+              }}
+            >
+              {[
+                { label: 'Усього інцидентів', value: incidents.length * 18, color: 'var(--accent)', icon: '📋' },
+                { label: 'Оброблено ШІ', value: '100%', color: '#10B981', icon: '🤖' },
+                { label: 'Критичні кризи', value: criticalCount, color: '#EF4444', icon: '⚠️' }
+              ].map((m, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(8px)',
+                    border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12,
+                    padding: '8px 10px', textAlign: 'center', pointerEvents: 'auto',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+                  }}
+                >
+                  <span style={{ fontSize: 9, color: 'var(--text-secondary)', display: 'block', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    {m.icon} {m.label}
+                  </span>
+                  <strong style={{ fontSize: 13, color: m.color, marginTop: 4, display: 'block' }}>{m.value}</strong>
+                </div>
+              ))}
+            </div>
 
-        {activeView === 'report' && (
-          <div className="w-full h-full overflow-hidden bg-[var(--bg-primary)]">
-            <ReportView
-              currentCity={currentCity}
-              onAddIncident={handleAddIncident}
-              onNavigateToMap={() => setActiveView('map')}
+            <CityMap
+              incidents={incidents}
+              city={currentCity}
+              selectedIncident={selectedIncident}
+              onSelectIncident={setSelectedIncident}
             />
           </div>
         )}
 
-        {activeView === 'analytics' && (
-          <div className="w-full h-full overflow-hidden bg-[var(--bg-primary)]">
+        {/* ─── MOBILE FEED VIEW (left phone on reference) ─── */}
+        {window.matchMedia('(max-width: 768px)').matches && mobileView === 'feed' && (
+          <div className="cs-page" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            {/* Header / Search strip */}
+            <div style={{ padding: '16px 16px 10px', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-secondary)', flexShrink: 0 }}>
+              <div className="cs-feed__search" style={{ marginBottom: 0 }}>
+                <span className="cs-feed__search-icon">
+                  <IconSearch size={14} color="var(--text-muted)" />
+                </span>
+                <input
+                  className="cs-feed__search-input"
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Пошук скарг..."
+                />
+                {searchQuery && (
+                  <button className="cs-feed__search-clear" onClick={() => setSearchQuery('')}>✕</button>
+                )}
+              </div>
+            </div>
+            {/* Incidents feed container */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px 80px' }}>
+              <MetricsBar incidents={incidents} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
+                <IncidentFeed
+                  incidents={incidents}
+                  selectedId={selectedIncident?.id ?? null}
+                  onSelect={setSelectedIncident}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ─── REPORT VIEW (New complaint form) ─── */}
+        {((!window.matchMedia('(max-width: 768px)').matches && activeView === 'report') || 
+          (window.matchMedia('(max-width: 768px)').matches && mobileView === 'report')) && (
+          <div className="cs-page">
+            <ReportView
+              currentCity={currentCity}
+              onAddIncident={handleAddIncident}
+              onNavigateToMap={() => {
+                setActiveView('map');
+                setMobileView('map');
+              }}
+            />
+          </div>
+        )}
+
+        {/* ─── ANALYTICS ─── */}
+        {((!window.matchMedia('(max-width: 768px)').matches && activeView === 'analytics') || 
+          (window.matchMedia('(max-width: 768px)').matches && mobileView === 'analytics')) && (
+          <div className="cs-page">
             <AnalyticsView incidents={incidents} />
           </div>
         )}
 
-        {activeView === 'profile' && (
-          <div className="w-full h-full overflow-hidden bg-[var(--bg-primary)]">
+        {/* ─── PROFILE ─── */}
+        {((!window.matchMedia('(max-width: 768px)').matches && activeView === 'profile') || 
+          (window.matchMedia('(max-width: 768px)').matches && mobileView === 'profile')) && (
+          <div className="cs-page">
             <ProfileView />
           </div>
         )}
 
-        {activeView === 'settings' && (
-          <div className="w-full h-full overflow-hidden bg-[var(--bg-primary)]">
+        {/* ─── SETTINGS ─── */}
+        {((!window.matchMedia('(max-width: 768px)').matches && activeView === 'settings') || 
+          (window.matchMedia('(max-width: 768px)').matches && mobileView === 'settings')) && (
+          <div className="cs-page">
             <SettingsView />
           </div>
         )}
+
+        {/* ─── Mobile FAB "Новий Звіт" (plugs directly into map/feed, bottom right) ─── */}
+        {(mobileView === 'map' || mobileView === 'feed') && (
+          <button
+            className="cs-btn-neon cs-m-fab cs-mobile-only"
+            onClick={() => handleMobileNavClick('report')}
+          >
+            Новий Звіт
+          </button>
+        )}
       </div>
 
-      {/* ═══ City Modal ════════════════════════════════════════════════ */}
+      {/* ═══ Mobile Bottom Nav Bar (From design reference) ══════════════ */}
+      <nav className="cs-m-nav cs-mobile-only">
+        <button
+          className={`cs-m-nav__item${mobileView === 'map' ? ' cs-m-nav__item--active' : ''}`}
+          onClick={() => handleMobileNavClick('map')}
+        >
+          <IconMap size={20} color={mobileView === 'map' ? 'var(--accent)' : 'var(--text-muted)'} />
+          <span>Карта</span>
+        </button>
+        <button
+          className={`cs-m-nav__item${mobileView === 'feed' ? ' cs-m-nav__item--active' : ''}`}
+          onClick={() => handleMobileNavClick('feed')}
+        >
+          <IconDashboard size={20} color={mobileView === 'feed' ? 'var(--accent)' : 'var(--text-muted)'} />
+          <span>Звіти</span>
+        </button>
+        <button
+          className={`cs-m-nav__item${mobileView === 'analytics' ? ' cs-m-nav__item--active' : ''}`}
+          onClick={() => handleMobileNavClick('analytics')}
+        >
+          <IconAnalytics size={20} color={mobileView === 'analytics' ? 'var(--accent)' : 'var(--text-muted)'} />
+          <span>Аналітика</span>
+        </button>
+        <button
+          className={`cs-m-nav__item${mobileView === 'profile' ? ' cs-m-nav__item--active' : ''}`}
+          onClick={() => handleMobileNavClick('profile')}
+        >
+          <IconUser size={20} color={mobileView === 'profile' ? 'var(--accent)' : 'var(--text-muted)'} />
+          <span>Профіль</span>
+        </button>
+        <button
+          className={`cs-m-nav__item${mobileView === 'settings' ? ' cs-m-nav__item--active' : ''}`}
+          onClick={() => handleMobileNavClick('settings')}
+        >
+          <IconSettings size={20} color={mobileView === 'settings' ? 'var(--accent)' : 'var(--text-muted)'} />
+          <span>Налаштування</span>
+        </button>
+      </nav>
+
+      {/* ═══ City Modal ═══════════════════════════════════════════════ */}
       <CityModal
         isOpen={isCityModalOpen}
         currentCityId={currentCity.id}

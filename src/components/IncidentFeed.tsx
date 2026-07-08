@@ -30,21 +30,12 @@ const IncidentCard: React.FC<{
 
   return (
     <div
-      className="incident-card cursor-pointer rounded-xl p-3 flex flex-col gap-2 fade-in transition-all duration-200"
+      className={`cs-incident-card${isSelected ? ' cs-incident-card--selected' : ''}${!isSelected && isCritical ? ' cs-incident-card--critical' : ''} fade-in`}
       onClick={onClick}
-      style={{
-        background: isSelected ? 'var(--accent-dim)' : 'var(--bg-glass)',
-        border: isSelected
-          ? '1px solid var(--accent)'
-          : isCritical
-          ? '1px solid rgba(239,68,68,0.35)'
-          : '1px solid var(--border-color)',
-        boxShadow: isSelected ? '0 0 0 1px rgba(0,242,254,0.15), var(--shadow-card)' : 'none',
-      }}
     >
-      {/* Top: badges + status */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex flex-wrap gap-1">
+      {/* Badges row */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
           <CategoryBadge category={incident.category} />
           {isResolved && (
             <span className="badge" style={{ background: 'rgba(16,185,129,0.15)', color: '#10B981', border: '1px solid rgba(16,185,129,0.3)' }}>
@@ -53,34 +44,37 @@ const IncidentCard: React.FC<{
           )}
         </div>
         <div
-          className="w-1.5 h-1.5 rounded-full flex-shrink-0"
           style={{
+            width: 7,
+            height: 7,
+            borderRadius: '50%',
+            flexShrink: 0,
             background: isResolved ? '#10B981' : isCritical ? '#EF4444' : incident.status === 'processing' ? '#3B82F6' : '#F59E0B',
             boxShadow: `0 0 6px ${isResolved ? '#10B981' : isCritical ? '#EF4444' : '#3B82F6'}`,
           }}
         />
       </div>
 
-      {/* Pulsing priority bar */}
+      {/* Priority bar */}
       {isCritical && !isResolved && <div className="priority-bar" />}
 
       {/* Title */}
-      <p className="text-sm font-semibold leading-snug" style={{ color: 'var(--text-primary)' }}>
+      <p style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.35, color: 'var(--text-primary)' }}>
         {incident.title}
       </p>
 
       {/* Meta */}
-      <div className="flex items-center gap-1.5 text-xs flex-wrap" style={{ color: 'var(--text-muted)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, flexWrap: 'wrap', color: 'var(--text-muted)' }}>
         <IconPin size={11} color="var(--text-muted)" />
         <span>{incident.complaintsCount} скарг</span>
         <span>·</span>
         <span>{incident.timeAgo}</span>
         <span>·</span>
-        <span className="truncate">{incident.location}</span>
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 120 }}>{incident.location}</span>
       </div>
 
       {/* Department */}
-      <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--text-secondary)' }}>
         <IconChevronRight size={10} color="var(--accent)" />
         {incident.department}
       </div>
@@ -88,7 +82,6 @@ const IncidentCard: React.FC<{
   );
 };
 
-// Purely the list — no header (header is in Dashboard)
 const IncidentFeed: React.FC<IncidentFeedProps> = ({ incidents, selectedId, onSelect }) => {
   const sorted = [...incidents].sort((a, b) => {
     const order = { critical: 0, high: 1, medium: 2, low: 3 };
@@ -99,9 +92,9 @@ const IncidentFeed: React.FC<IncidentFeedProps> = ({ incidents, selectedId, onSe
 
   if (sorted.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-3 py-12">
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 0', gap: 12 }}>
         <div style={{ color: 'var(--text-muted)', fontSize: 36 }}>🗺️</div>
-        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Немає інцидентів</p>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Немає інцидентів</p>
       </div>
     );
   }
