@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Sidebar, { type SidebarView } from '../components/Sidebar';
 import MetricsBar from '../components/MetricsBar';
 import IncidentFeed from '../components/IncidentFeed';
@@ -11,20 +11,9 @@ import SettingsView from './SettingsView';
 import CSLogo from '../components/CSLogo';
 import { type Incident, type City, CITIES, CITY_INCIDENTS } from '../data/incidents';
 import { IconGlobe, IconPin, IconSearch, IconMap, IconAnalytics, IconUser, IconDashboard, IconSettings } from '../components/Icons';
+import { fetchCityIncidents, submitIncident, joinIncidentVote } from '../lib/incidents';
 
 type MobileActiveView = SidebarView | 'feed';
-
-const USER_INCIDENTS_KEY = 'citysense_user_incidents';
-const JOINED_VOTES_KEY = 'citysense_joined_votes';
-
-function loadJson<T>(key: string, fallback: T): T {
-  try {
-    const saved = localStorage.getItem(key);
-    return saved ? JSON.parse(saved) as T : fallback;
-  } catch {
-    return fallback;
-  }
-}
 
 const Dashboard: React.FC = () => {
   const [activeView, setActiveView] = useState<SidebarView>('map');
@@ -34,39 +23,34 @@ const Dashboard: React.FC = () => {
   const [currentCity, setCurrentCity] = useState<City>(CITIES[0]);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Incidents a user submitted through the report form, kept separately from
-  // the static seed data so they survive a page refresh (persisted below).
-  const [userIncidents, setUserIncidents] = useState<Record<string, Incident[]>>(() =>
-    loadJson(USER_INCIDENTS_KEY, {} as Record<string, Incident[]>)
-  );
+  // Incidents a user submitted through the report form, persisted in MongoDB
+  // (via /api/incidents) so they survive a page refresh and are shared across
+  // devices/sessions.
+  const [userIncidents, setUserIncidents] = useState<Incident[]>([]);
   // Extra "join this incident" votes, keyed by incident id, also persisted.
-  const [joinedVotes, setJoinedVotes] = useState<Record<string, number>>(() =>
-    loadJson(JOINED_VOTES_KEY, {} as Record<string, number>)
-  );
+  const [votes, setVotes] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    localStorage.setItem(USER_INCIDENTS_KEY, JSON.stringify(userIncidents));
-  }, [userIncidents]);
+    let cancelled = false;
+    fetchCityIncidents(currentCity.id)
+      .then(data => {
+        if (cancelled) return;
+        setUserIncidents(data.incidents);
+        setVotes(data.votes);
+      })
+      .catch(err => console.error('Failed to load incidents from MongoDB:', err));
+    return () => { cancelled = true; };
+  }, [currentCity.id]);
 
-  useEffect(() => {
-    localStorage.setItem(JOINED_VOTES_KEY, JSON.stringify(joinedVotes));
-  }, [joinedVotes]);
-
-  const allCityIncidents: Record<string, Incident[]> = React.useMemo(() => {
-    const merged: Record<string, Incident[]> = {};
-    for (const cityId of Object.keys(CITY_INCIDENTS)) {
-      const withVotes = CITY_INCIDENTS[cityId].map(inc =>
-        joinedVotes[inc.id] ? { ...inc, complaintsCount: inc.complaintsCount + joinedVotes[inc.id] } : inc
-      );
-      merged[cityId] = [...(userIncidents[cityId] ?? []), ...withVotes];
-    }
-    return merged;
-  }, [userIncidents, joinedVotes]);
+  const rawIncidents: Incident[] = useMemo(() => {
+    const seedWithVotes = (CITY_INCIDENTS[currentCity.id] ?? []).map(inc =>
+      votes[inc.id] ? { ...inc, complaintsCount: inc.complaintsCount + votes[inc.id] } : inc
+    );
+    return [...userIncidents, ...seedWithVotes];
+  }, [userIncidents, votes, currentCity.id]);
 
   // Mobile specific view switcher state
   const [mobileView, setMobileView] = useState<MobileActiveView>('map');
-
-  const rawIncidents = allCityIncidents[currentCity.id] ?? [];
   const incidents = rawIncidents.filter(inc =>
     inc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     inc.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -81,14 +65,13 @@ const Dashboard: React.FC = () => {
   };
 
   const handleAddIncident = (newInc: Incident) => {
-    setUserIncidents(prev => ({
-      ...prev,
-      [currentCity.id]: [newInc, ...(prev[currentCity.id] ?? [])],
-    }));
+    setUserIncidents(prev => [newInc, ...prev]);
+    submitIncident(currentCity.id, newInc).catch(err => console.error('Failed to save incident to MongoDB:', err));
   };
 
   const handleJoinIncident = (incidentId: string) => {
-    setJoinedVotes(prev => ({ ...prev, [incidentId]: (prev[incidentId] ?? 0) + 1 }));
+    setVotes(prev => ({ ...prev, [incidentId]: (prev[incidentId] ?? 0) + 1 }));
+    joinIncidentVote(incidentId).catch(err => console.error('Failed to save vote to MongoDB:', err));
   };
 
   const handleMobileNavClick = (view: MobileActiveView) => {

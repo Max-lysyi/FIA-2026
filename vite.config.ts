@@ -1,6 +1,8 @@
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { getDb } from './server/mongo.js'
+import { listUserIncidents, addIncident, getVotes, joinIncident } from './server/incidentsRepo.js'
 
 const AETHERCODE_URL = 'https://aethercode.my/v1/chat/completions'
 
@@ -80,10 +82,69 @@ function aiDevProxy(env: Record<string, string>): Plugin {
   }
 }
 
-export default defineConfig(({ mode }) => ({
-  plugins: [
-    tailwindcss(),
-    react(),
-    aiDevProxy(loadEnv(mode, process.cwd(), '')),
-  ],
-}))
+// Dev-only stand-in for the Vercel serverless function at api/incidents.ts,
+// backed by the same MongoDB Atlas cluster.
+function incidentsDevProxy(env: Record<string, string>): Plugin {
+  return {
+    name: 'incidents-dev-proxy',
+    configureServer(server) {
+      server.middlewares.use('/api/incidents', async (req, res) => {
+        try {
+          const db = await getDb(env)
+          const url = new URL(req.url || '', 'http://localhost')
+
+          if (req.method === 'GET') {
+            const cityId = url.searchParams.get('cityId') ?? ''
+            const [incidents, votes] = await Promise.all([
+              cityId ? listUserIncidents(db, cityId) : Promise.resolve([]),
+              getVotes(db),
+            ])
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify({ incidents, votes }))
+            return
+          }
+
+          if (req.method === 'POST') {
+            const chunks: Buffer[] = []
+            for await (const chunk of req) chunks.push(chunk as Buffer)
+            const body = JSON.parse(Buffer.concat(chunks).toString() || '{}')
+
+            if (body.action === 'add') {
+              await addIncident(db, body.cityId, body.incident)
+              res.setHeader('Content-Type', 'application/json')
+              res.end(JSON.stringify({ ok: true }))
+              return
+            }
+            if (body.action === 'join') {
+              const count = await joinIncident(db, body.incidentId)
+              res.setHeader('Content-Type', 'application/json')
+              res.end(JSON.stringify({ ok: true, count }))
+              return
+            }
+            res.statusCode = 400
+            res.end(JSON.stringify({ error: 'Unknown action' }))
+            return
+          }
+
+          res.statusCode = 405
+          res.end(JSON.stringify({ error: 'Method not allowed' }))
+        } catch (e) {
+          res.statusCode = 500
+          res.end(JSON.stringify({ error: e instanceof Error ? e.message : 'Unknown error' }))
+        }
+      })
+    },
+  }
+}
+
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+  return {
+    plugins: [
+      tailwindcss(),
+      react(),
+      aiDevProxy(env),
+      incidentsDevProxy(env),
+    ],
+  }
+})
