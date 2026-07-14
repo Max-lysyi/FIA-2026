@@ -1,11 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { CATEGORY_CONFIG, type Incident, type City, CITIES } from '../data/incidents';
 import { useAuth } from '../context/AuthContext';
+import { classifyIncident } from '../lib/ai';
+import LocationPicker from '../components/LocationPicker';
 
 interface ReportViewProps {
   currentCity: City;
-  onAddIncident: (incident: Incident) => void;
+  cityIncidents: Incident[];
+  onAddIncident: (cityId: string, incident: Incident) => void;
+  onJoinIncident: (incidentId: string) => void;
   onNavigateToMap: () => void;
+}
+
+const DUPLICATE_RADIUS_METERS = 100;
+
+// Haversine distance in meters between two lat/lng points.
+function distanceMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
 }
 
 const IconSparkles = () => (
@@ -27,15 +44,6 @@ const IconUpload = () => (
   </svg>
 );
 
-const AI_COPILOT_TEMPLATES = [
-  'Зафіксовано аварійну ситуацію на дорожньому покритті: глибока вибоїна створює безпосередню загрозу пошкодження коліс транспортних засобів та може спровокувати ДТП. Потрібен терміновий точковий ремонт.',
-  'Виявлено прорив мережі водопостачання. Вода під тиском розмиває ґрунт біля тротуару та підтоплює прилеглу територію. Необхідно перекрити ділянку та замінити пошкоджену ділянку труби.',
-  'У зеленій зоні зафіксовано велику аварійну гілку, яка зависла над пішохідною доріжкою. Є загроза падіння при поривах вітру. Необхідно провести санітарне обрізання дерева.',
-  'На перехресті вийшов з ладу світлофорний об\'єкт, через що виник тривалий затор. Необхідно направити екіпаж регулювальників та провести ремонт контролера.',
-  'Спостерігається специфічний хімічний запах з боку прилеглої промислової зони. Можливий несанкціонований викид. Потрібен екологічний замір та перевірка.',
-  'На прибудинковій території виявлено значне накопичення побутового та будівельного сміття поза межами баків. Засмічення створює антисанітарні умови.',
-];
-
 const KHMELNYTSKYI_STREETS = [
   'вул. Проскурівська',
   'вул. Кам\'янецька',
@@ -49,13 +57,23 @@ const KHMELNYTSKYI_STREETS = [
   'вул. Незалежності',
 ];
 
-const ReportView: React.FC<ReportViewProps> = ({ currentCity, onAddIncident, onNavigateToMap }) => {
+function normalizeAddress(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/вул\.?|просп\.?|пров\.?|бульв\.?/g, '')
+    .replace(/['’ʼ]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+const ReportView: React.FC<ReportViewProps> = ({ currentCity, cityIncidents, onAddIncident, onJoinIncident, onNavigateToMap }) => {
   const { user, addPoints } = useAuth();
 
   const [address, setAddress] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [filteredStreets, setFilteredStreets] = useState<string[]>([]);
-  const [cityId, setCityId] = useState(CITIES.find(c => c.id === 'khmelnytskyi')?.id ?? currentCity.id);
+  const [cityId, setCityId] = useState(currentCity.id);
+  const [point, setPoint] = useState({ lat: currentCity.lat, lng: currentCity.lng });
   const [timeFound, setTimeFound] = useState('');
   const [description, setDescription] = useState('');
   const [isCopilotRunning, setIsCopilotRunning] = useState(false);
@@ -63,9 +81,33 @@ const ReportView: React.FC<ReportViewProps> = ({ currentCity, onAddIncident, onN
   const [category, setCategory] = useState<keyof typeof CATEGORY_CONFIG>('utility');
   const [urgency, setUrgency] = useState(3);
   const [aiDept, setAiDept] = useState('КП Хмельницькводоканал');
-  const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
   const [showSecondWarning, setShowSecondWarning] = useState(false);
   const [submitPlan, setSubmitPlan] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiProcessed, setAiProcessed] = useState(false);
+
+  // Real duplicate detection: find an existing open incident whose address
+  // roughly matches what was typed, then look for other open incidents within
+  // DUPLICATE_RADIUS_METERS of it using actual lat/lng distance.
+  const nearbyDuplicates = useMemo(() => {
+    const query = normalizeAddress(address);
+    if (query.length < 3) return [];
+
+    const anchor = cityIncidents.find(
+      inc => inc.status !== 'resolved' && normalizeAddress(inc.location).includes(query)
+    );
+    if (!anchor) return [];
+
+    return cityIncidents.filter(
+      inc => inc.status !== 'resolved' && distanceMeters(anchor.lat, anchor.lng, inc.lat, inc.lng) <= DUPLICATE_RADIUS_METERS
+    );
+  }, [address, cityIncidents]);
+
+  const showDuplicateWarning = nearbyDuplicates.length > 0;
+
+  useEffect(() => {
+    if (!showDuplicateWarning) setShowSecondWarning(false);
+  }, [showDuplicateWarning]);
 
   useEffect(() => {
     const now = new Date();
@@ -86,43 +128,23 @@ const ReportView: React.FC<ReportViewProps> = ({ currentCity, onAddIncident, onN
     }
   }, [address]);
 
-  useEffect(() => {
-    if (address.includes('Проскурівська') || address.includes('Кам\'янецька')) {
-      setShowDuplicateWarning(true);
-    } else {
-      setShowDuplicateWarning(false);
-      setShowSecondWarning(false);
-    }
-  }, [address]);
-
-  useEffect(() => {
-    const desc = description.toLowerCase();
-    if (desc.includes('вод') || desc.includes('труб') || desc.includes('прорив')) {
-      setCategory('utility');
-      setAiDept(cityId === 'khmelnytskyi' ? 'КП Хмельницькводоканал' : 'Міськводоканал');
-      setUrgency(4);
-    } else if (desc.includes('аварі') || desc.includes('дерев') || desc.includes('критич')) {
-      setCategory('critical');
-      setAiDept('Служба ДСНС');
-      setUrgency(5);
-    } else if (desc.includes('дорог') || desc.includes('світлофор') || desc.includes('яма')) {
-      setCategory('transport');
-      setAiDept('Служба автомобільних доріг');
-      setUrgency(3);
-    } else if (desc.includes('смітт') || desc.includes('еколог')) {
-      setCategory('ecology');
-      setAiDept('Екологічний інспектор');
-      setUrgency(4);
-    }
-  }, [description, cityId]);
-
-  const runAiCopilot = () => {
+  const runAiCopilot = async () => {
+    const raw = description.trim();
+    if (!raw) return;
     setIsCopilotRunning(true);
-    setTimeout(() => {
-      const idx = Math.floor(Math.random() * AI_COPILOT_TEMPLATES.length);
-      setDescription(AI_COPILOT_TEMPLATES[idx]);
+    setAiError(null);
+    try {
+      const result = await classifyIncident(raw);
+      setDescription(result.improvedText);
+      setCategory(result.category);
+      setAiDept(result.department);
+      setUrgency(result.priority === 'critical' ? 5 : result.priority === 'high' ? 4 : result.priority === 'medium' ? 3 : 2);
+      setAiProcessed(true);
+    } catch (e) {
+      setAiError(e instanceof Error ? e.message : 'Не вдалося отримати відповідь ШІ');
+    } finally {
       setIsCopilotRunning(false);
-    }, 900);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -132,7 +154,6 @@ const ReportView: React.FC<ReportViewProps> = ({ currentCity, onAddIncident, onN
 
   const handleCloseOverlayAndAdd = () => {
     setSubmitPlan(false);
-    const selectedCity = CITIES.find(c => c.id === cityId) || currentCity;
     const newIncident: Incident = {
       id: `inc-${Date.now()}`,
       title: description.split('.')[0].slice(0, 60) || 'Новий інцидент',
@@ -140,17 +161,18 @@ const ReportView: React.FC<ReportViewProps> = ({ currentCity, onAddIncident, onN
       category,
       status: 'new',
       priority: urgency === 5 ? 'critical' : urgency >= 4 ? 'high' : urgency >= 2 ? 'medium' : 'low',
-      location: address || 'Локація визначена за GPS',
-      lat: selectedCity.lat + (Math.random() - 0.5) * 0.008,
-      lng: selectedCity.lng + (Math.random() - 0.5) * 0.008,
+      location: address || `Точка на мапі (${point.lat.toFixed(4)}, ${point.lng.toFixed(4)})`,
+      lat: point.lat,
+      lng: point.lng,
       complaintsCount: 1,
       timeAgo: 'Щойно',
       department: aiDept,
       beforePhoto: photoPreview || undefined,
+      aiProcessed,
     };
 
     if (user?.isLoggedIn) addPoints(10, `Інцидент: ${newIncident.title.slice(0, 30)}...`);
-    onAddIncident(newIncident);
+    onAddIncident(cityId, newIncident);
     onNavigateToMap();
   };
 
@@ -204,7 +226,11 @@ const ReportView: React.FC<ReportViewProps> = ({ currentCity, onAddIncident, onN
                   <select
                     className="cs-form-select"
                     value={cityId}
-                    onChange={e => setCityId(e.target.value)}
+                    onChange={e => {
+                      const next = CITIES.find(c => c.id === e.target.value);
+                      setCityId(e.target.value);
+                      if (next) setPoint({ lat: next.lat, lng: next.lng });
+                    }}
                   >
                     {CITIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
@@ -225,6 +251,20 @@ const ReportView: React.FC<ReportViewProps> = ({ currentCity, onAddIncident, onN
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Location picker — click or drag the pin to mark the exact spot */}
+            <div className="cs-form-card">
+              <div className="cs-form-card__title">🗺️ Точка на мапі</div>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 10 }}>
+                Клікніть на мапі або перетягніть маркер, щоб вказати точне місце проблеми
+              </p>
+              <div style={{ width: '100%', height: 220, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+                <LocationPicker lat={point.lat} lng={point.lng} zoom={14} onChange={(lat, lng) => setPoint({ lat, lng })} />
+              </div>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
+                📍 {point.lat.toFixed(5)}, {point.lng.toFixed(5)}
+              </p>
             </div>
 
             {/* Media drag & drop */}
@@ -258,7 +298,7 @@ const ReportView: React.FC<ReportViewProps> = ({ currentCity, onAddIncident, onN
                 <div className="cs-form-card__title">📝 Опис із ШІ-помічником</div>
                 <button
                   onClick={runAiCopilot}
-                  disabled={isCopilotRunning}
+                  disabled={isCopilotRunning || !description.trim()}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 6,
                     padding: '6px 14px', borderRadius: 50,
@@ -266,7 +306,7 @@ const ReportView: React.FC<ReportViewProps> = ({ currentCity, onAddIncident, onN
                     background: 'rgba(0,242,254,0.12)',
                     border: '1px solid rgba(0,242,254,0.3)',
                     color: 'var(--accent)', cursor: 'pointer',
-                    opacity: isCopilotRunning ? 0.6 : 1,
+                    opacity: isCopilotRunning || !description.trim() ? 0.6 : 1,
                   }}
                 >
                   <IconSparkles />
@@ -276,12 +316,15 @@ const ReportView: React.FC<ReportViewProps> = ({ currentCity, onAddIncident, onN
               <textarea
                 className="cs-form-textarea"
                 value={description}
-                onChange={e => setDescription(e.target.value)}
+                onChange={e => { setDescription(e.target.value); setAiProcessed(false); }}
                 placeholder="Опишіть своїми словами... (ШІ покращить та структурує опис)"
               />
               <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                 💡 Натисніть кнопку ШІ, щоб збагатити опис для комунальних служб
               </p>
+              {aiError && (
+                <p style={{ fontSize: 11, color: '#EF4444' }}>⚠️ Помилка ШІ: {aiError}</p>
+              )}
             </div>
 
             {/* AI Classification — hybrid editable */}
@@ -344,12 +387,15 @@ const ReportView: React.FC<ReportViewProps> = ({ currentCity, onAddIncident, onN
               <div>
                 <span className="cs-dup-warning__title">⚠️ ДУБЛІКАТ ІНЦИДЕНТУ</span>
                 <p className="cs-dup-warning__text">
-                  У радіусі 100м вже є 2 схожі заявки за сьогодні. Бажаєте додати свій голос до існуючої проблеми замість створення нової?
+                  У радіусі {DUPLICATE_RADIUS_METERS}м вже {nearbyDuplicates.length === 1 ? 'є 1 схожа заявка' : `є ${nearbyDuplicates.length} схожих заявок`}. Бажаєте додати свій голос до існуючої проблеми замість створення нової?
                 </p>
               </div>
               <div className="cs-dup-warning__actions">
                 <button
-                  onClick={onNavigateToMap}
+                  onClick={() => {
+                    onJoinIncident(nearbyDuplicates[0].id);
+                    onNavigateToMap();
+                  }}
                   style={{ padding: '8px 18px', borderRadius: 10, fontSize: 12, fontWeight: 700, background: '#F59E0B', color: '#fff', border: 'none', cursor: 'pointer' }}
                 >
                   Доєднатися (+1)
@@ -369,14 +415,16 @@ const ReportView: React.FC<ReportViewProps> = ({ currentCity, onAddIncident, onN
                   <p style={{ fontSize: 14, fontWeight: 700, color: '#EF4444', marginBottom: 4 }}>Ви впевнені?</p>
                   <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Повторні заявки сповільнюють роботу комунальних служб.</p>
                 </div>
-                <div className="cs-dup-similar-card">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#EF4444' }}>Подібна скарга поруч</span>
-                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Сьогодні, 10:45</span>
+                {nearbyDuplicates.slice(0, 3).map(dup => (
+                  <div className="cs-dup-similar-card" key={dup.id}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#EF4444' }}>Подібна скарга поруч</span>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{dup.timeAgo}</span>
+                    </div>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{dup.title}</p>
+                    <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Категорія: {CATEGORY_CONFIG[dup.category].label} · {dup.location}</p>
                   </div>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Зламане дерево заблокувало пішохідний перехід</p>
-                  <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Категорія: Критично · вул. Проскурівська, 42</p>
-                </div>
+                ))}
               </div>
             )}
           </div>

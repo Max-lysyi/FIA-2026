@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { CATEGORY_CONFIG, type Incident, type City } from '../data/incidents';
-import BeforeAfterSlider from './BeforeAfterSlider';
 import { useTheme } from '../context/ThemeContext';
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -24,7 +23,11 @@ const ZOOM_SINGLE_CLUSTER = 11; // below this: one blue dot for everything
 const ZOOM_INDIVIDUAL     = 15; // at or above this: individual dots
 
 function getRadius(zoom: number): number {
-  if (zoom >= 15) return 0.0004;
+  // Keep halving past zoom 15 instead of flattening out, so incidents that
+  // are close together (but not identical) still separate into individual
+  // markers once the user zooms in far enough.
+  if (zoom > 15) return 0.0004 / Math.pow(2, zoom - 15);
+  if (zoom === 15) return 0.0004;
   if (zoom >= 14) return 0.003;
   if (zoom >= 13) return 0.006;
   if (zoom >= 12) return 0.012;
@@ -59,6 +62,72 @@ function hexToRgb(hex: string): string {
   return `${r},${g},${b}`;
 }
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+const PRIORITY_LABELS: Record<string, string> = { low: 'Низький', medium: 'Середній', high: 'Високий', critical: 'Критичний' };
+const PRIORITY_COLORS: Record<string, string> = { low: '#10B981', medium: '#F59E0B', high: '#F97316', critical: '#EF4444' };
+
+// ── Hover tooltip — compact preview ─────────────────────────────────────
+function buildTooltipHtml(inc: Incident): string {
+  const cfg = CATEGORY_CONFIG[inc.category];
+  return `
+    <div class="cs-map-tip">
+      <div class="cs-map-tip__title">${escapeHtml(inc.title)}</div>
+      <div class="cs-map-tip__row">
+        <span class="cs-map-tip__badge" style="background:${cfg.bgColor};color:${cfg.color};border-color:${cfg.borderColor}">${cfg.label}</span>
+        <span class="cs-map-tip__badge" style="background:${PRIORITY_COLORS[inc.priority]}22;color:${PRIORITY_COLORS[inc.priority]};border-color:${PRIORITY_COLORS[inc.priority]}55">${PRIORITY_LABELS[inc.priority]}</span>
+      </div>
+      <div class="cs-map-tip__meta">👥 ${inc.complaintsCount} скарг · 📍 ${escapeHtml(inc.location)}</div>
+    </div>`;
+}
+
+// ── Click popup — full detail card ──────────────────────────────────────
+function buildPopupHtml(inc: Incident): string {
+  const cfg = CATEGORY_CONFIG[inc.category];
+  const hasBeforeAfter = inc.status === 'resolved' && inc.beforePhoto && inc.afterPhoto;
+  const singlePhoto = !hasBeforeAfter ? (inc.beforePhoto || inc.afterPhoto) : null;
+
+  let photosHtml = '';
+  if (hasBeforeAfter) {
+    photosHtml = `
+      <div class="cs-map-popup__photos">
+        <div class="cs-map-popup__photo-col">
+          <img src="${inc.beforePhoto}" alt="До" />
+          <span>До</span>
+        </div>
+        <div class="cs-map-popup__photo-col">
+          <img src="${inc.afterPhoto}" alt="Після" />
+          <span>Після</span>
+        </div>
+      </div>`;
+  } else if (singlePhoto) {
+    photosHtml = `<img class="cs-map-popup__photo" src="${singlePhoto}" alt="${escapeHtml(inc.title)}" />`;
+  }
+
+  return `
+    <div class="cs-map-popup">
+      <div class="cs-map-popup__title">${escapeHtml(inc.title)}</div>
+      <div class="cs-map-popup__location">📍 ${escapeHtml(inc.location)}</div>
+      <div class="cs-map-popup__badges">
+        <span class="cs-map-popup__badge" style="background:${cfg.bgColor};color:${cfg.color};border-color:${cfg.borderColor}">${cfg.label}</span>
+        <span class="cs-map-popup__badge" style="background:${PRIORITY_COLORS[inc.priority]}22;color:${PRIORITY_COLORS[inc.priority]};border-color:${PRIORITY_COLORS[inc.priority]}55">${PRIORITY_LABELS[inc.priority]}</span>
+      </div>
+      <p class="cs-map-popup__desc">${escapeHtml(inc.description)}</p>
+      <div class="cs-map-popup__meta">
+        <span>👥 ${inc.complaintsCount} скарг</span>
+        <span>🏢 ${escapeHtml(inc.department)}</span>
+        <span>🕐 ${escapeHtml(inc.timeAgo)}</span>
+      </div>
+      ${photosHtml}
+    </div>`;
+}
+
 // ── Component ─────────────────────────────────────────────────────────────
 interface CityMapProps {
   selectedIncident: Incident | null;
@@ -73,6 +142,7 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
   const tileRef       = useRef<L.TileLayer | null>(null);
   const markersGroup  = useRef<L.LayerGroup | null>(null);
   const heatGroup     = useRef<L.LayerGroup | null>(null);
+  const markersById   = useRef<Map<string, L.Marker>>(new Map());
   const { isDark }    = useTheme();
   const [zoom, setZoom]               = useState(city.zoom);
 
@@ -104,11 +174,15 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
     mapRef.current?.flyTo([city.lat, city.lng], city.zoom, { duration: 1.2 });
   }, [city]);
 
-  // Heatmap circles
+  // Heatmap circles — a "hot zone" glow that only makes sense at city-wide
+  // zoom levels. Its radius is in real-world meters, so at high zoom (once
+  // individual markers are already visible) the same circle fills the whole
+  // screen and hides the actual points, so it's hidden past that zoom.
   useEffect(() => {
     const hg = heatGroup.current;
     if (!hg) return;
     hg.clearLayers();
+    if (zoom >= ZOOM_INDIVIDUAL) return;
     incidents.forEach(inc => {
       const cfg = CATEGORY_CONFIG[inc.category];
       const intensity = Math.min(inc.complaintsCount / 15, 1);
@@ -116,7 +190,7 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
       L.circle([inc.lat, inc.lng], { radius: r * 2.2, color: 'transparent', fillColor: cfg.markerColor, fillOpacity: 0.04 + intensity * 0.06, weight: 0 }).addTo(hg);
       L.circle([inc.lat, inc.lng], { radius: r,       color: 'transparent', fillColor: cfg.markerColor, fillOpacity: 0.10 + intensity * 0.16, weight: 0 }).addTo(hg);
     });
-  }, [incidents]);
+  }, [incidents, zoom]);
 
   // Markers — re-draw whenever zoom changes or incidents change
   const drawMarkers = useCallback(() => {
@@ -124,6 +198,7 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
     const map = mapRef.current;
     if (!mg || !map) return;
     mg.clearLayers();
+    markersById.current.clear();
 
     const currentZoom = map.getZoom();
 
@@ -168,36 +243,26 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
       const centerLng = cluster.reduce((s, i) => s + i.lng, 0) / cluster.length;
 
       if (cluster.length === 1) {
-        // ── Individual marker ──
+        // ── Individual marker — a plain dot, no number, so it never reads
+        // as a cluster bubble. Hover shows a quick preview tooltip, click
+        // opens a full detail popup anchored to the marker. ──
         const inc = cluster[0];
         const cfg = CATEGORY_CONFIG[inc.category];
         const isResolved = inc.status === 'resolved';
         const isCritical = inc.priority === 'critical';
-        const baseSize = isResolved ? 18 : isCritical ? 26 : 22;
-
-        const showCount = total > 1;
+        const baseSize = isResolved ? 16 : isCritical ? 22 : 18;
 
         const icon = L.divIcon({
           html: `
             <div style="
-              position: relative;
               width:${baseSize}px; height:${baseSize}px;
               background: ${cfg.markerColor};
-              border: 2px solid rgba(255,255,255,0.8);
+              border: 2px solid rgba(255,255,255,0.9);
               border-radius: 50%;
               box-shadow: 0 0 ${baseSize}px ${cfg.markerColor}80;
-              display: flex; align-items: center; justify-content: center;
               cursor: pointer;
               ${isCritical ? 'animation: m-pulse 1.4s ease-in-out infinite;' : ''}
-            ">
-              ${showCount ? `<span style="
-                font-size:${baseSize <= 20 ? 8 : 10}px;
-                font-weight:800;
-                color:white;
-                text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-                line-height:1;
-              ">${total}</span>` : ''}
-            </div>
+            "></div>
             <style>
               @keyframes m-pulse {
                 0%,100% { transform:scale(1); box-shadow:0 0 ${baseSize}px ${cfg.markerColor}80; }
@@ -209,10 +274,22 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
           iconAnchor: [baseSize / 2, baseSize / 2],
         });
 
-        const m = L.marker([inc.lat, inc.lng], { icon }).addTo(mg);
-        m.on('click', () => {
-          onSelectIncident(inc);
-        });
+        const m = L.marker([inc.lat, inc.lng], { icon })
+          .bindTooltip(buildTooltipHtml(inc), {
+            direction: 'top',
+            offset: [0, -baseSize / 2],
+            opacity: 1,
+            className: 'cs-map-tip-wrapper',
+          })
+          .bindPopup(buildPopupHtml(inc), {
+            className: 'cs-map-popup-wrapper',
+            maxWidth: 300,
+            offset: [0, -baseSize / 2],
+          })
+          .addTo(mg);
+
+        m.on('click', () => onSelectIncident(inc));
+        markersById.current.set(inc.id, m);
 
       } else {
         // ── Cluster bubble ──
@@ -248,11 +325,18 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
           iconAnchor: [size / 2, size / 2],
         });
 
-        const m = L.marker([centerLat, centerLng], { icon }).addTo(mg);
+        const clusterCount = cluster.length;
+        const m = L.marker([centerLat, centerLng], { icon })
+          .bindTooltip(`<div class="cs-map-tip"><div class="cs-map-tip__title">${clusterCount} інцидентів у цій зоні</div><div class="cs-map-tip__meta">Клікніть, щоб наблизити</div></div>`, {
+            direction: 'top',
+            offset: [0, -size / 2],
+            opacity: 1,
+            className: 'cs-map-tip-wrapper',
+          })
+          .addTo(mg);
         m.on('click', () => {
           const nextZoom = Math.min(map.getZoom() + 2, 18);
           map.flyTo([centerLat, centerLng], nextZoom, { duration: 0.7 });
-          onSelectIncident(cluster[0]);
         });
       }
     });
@@ -260,41 +344,24 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
 
   useEffect(() => { drawMarkers(); }, [zoom, drawMarkers]);
 
-  // Fly to selected
+  // When an incident is selected from outside the map (e.g. the sidebar
+  // feed), fly to it and — once individual markers exist at that zoom —
+  // open its popup, same as if the user had clicked it directly.
   useEffect(() => {
-    if (selectedIncident && mapRef.current) {
-      mapRef.current.flyTo([selectedIncident.lat, selectedIncident.lng], 16, { duration: 0.8 });
-    }
-  }, [selectedIncident]);
+    const map = mapRef.current;
+    if (!selectedIncident || !map) return;
 
-  // Determine if Before/After is shown (whenever a resolved incident is active)
-  const isResolvedSelected = selectedIncident?.status === 'resolved';
+    map.flyTo([selectedIncident.lat, selectedIncident.lng], 16, { duration: 0.8 });
+
+    const timer = setTimeout(() => {
+      markersById.current.get(selectedIncident.id)?.openPopup();
+    }, 900);
+    return () => clearTimeout(timer);
+  }, [selectedIncident]);
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
-
-      {/* Before/After slider — shown when resolved incident selected */}
-      {isResolvedSelected && selectedIncident?.beforePhoto && selectedIncident?.afterPhoto && (
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-start', zIndex: 50, padding: 24, pointerEvents: 'none' }}>
-          <div className="glass-card" style={{ padding: 16, width: 320, pointerEvents: 'auto', background: 'var(--bg-card)', borderRadius: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <div>
-                <h4 style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)' }}>{selectedIncident.title}</h4>
-                <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{selectedIncident.location}</p>
-              </div>
-              <button
-                onClick={() => onSelectIncident(null)}
-                style={{ width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, background: 'var(--bg-glass)', color: 'var(--text-secondary)', border: 'none', cursor: 'pointer' }}
-              >
-                ✕
-              </button>
-            </div>
-            <BeforeAfterSlider beforeSrc={selectedIncident.beforePhoto} afterSrc={selectedIncident.afterPhoto} />
-            <p style={{ fontSize: 11, marginTop: 8, textAlign: 'center', color: 'var(--text-muted)' }}>← Перетягніть →</p>
-          </div>
-        </div>
-      )}
 
       {/* Legend */}
       <div

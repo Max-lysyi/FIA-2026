@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Sidebar, { type SidebarView } from '../components/Sidebar';
 import MetricsBar from '../components/MetricsBar';
 import IncidentFeed from '../components/IncidentFeed';
@@ -11,6 +11,7 @@ import SettingsView from './SettingsView';
 import CSLogo from '../components/CSLogo';
 import { type Incident, type City, CITIES, CITY_INCIDENTS } from '../data/incidents';
 import { IconGlobe, IconPin, IconSearch, IconMap, IconAnalytics, IconUser, IconDashboard, IconSettings } from '../components/Icons';
+import { fetchCityIncidents, submitIncident, joinIncidentVote } from '../lib/incidents';
 
 type MobileActiveView = SidebarView | 'feed';
 
@@ -21,17 +22,46 @@ const Dashboard: React.FC = () => {
   const [isCityModalOpen, setIsCityModalOpen] = useState(false);
   const [currentCity, setCurrentCity] = useState<City>(CITIES[0]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [allCityIncidents, setAllCityIncidents] = useState<Record<string, Incident[]>>(CITY_INCIDENTS);
+
+  // Incidents a user submitted through the report form, persisted in MongoDB
+  // (via /api/incidents) so they survive a page refresh and are shared across
+  // devices/sessions.
+  const [userIncidents, setUserIncidents] = useState<Incident[]>([]);
+  // Extra "join this incident" votes, keyed by incident id, also persisted.
+  const [votes, setVotes] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchCityIncidents(currentCity.id)
+      .then(data => {
+        if (cancelled) return;
+        setUserIncidents(data.incidents);
+        setVotes(data.votes);
+      })
+      .catch(err => console.error('Failed to load incidents from MongoDB:', err));
+    return () => { cancelled = true; };
+  }, [currentCity.id]);
+
+  const rawIncidents: Incident[] = useMemo(() => {
+    const seedWithVotes = (CITY_INCIDENTS[currentCity.id] ?? []).map(inc =>
+      votes[inc.id] ? { ...inc, complaintsCount: inc.complaintsCount + votes[inc.id] } : inc
+    );
+    return [...userIncidents, ...seedWithVotes];
+  }, [userIncidents, votes, currentCity.id]);
 
   // Mobile specific view switcher state
   const [mobileView, setMobileView] = useState<MobileActiveView>('map');
-
-  const rawIncidents = allCityIncidents[currentCity.id] ?? [];
-  const incidents = rawIncidents.filter(inc =>
-    inc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    inc.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    inc.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Memoized so CityMap's marker-drawing effect (keyed on this array's
+  // identity) doesn't re-run and redraw every marker on every unrelated
+  // re-render — e.g. right after a marker click sets selectedIncident.
+  const incidents = useMemo(() => {
+    const q = searchQuery.toLowerCase();
+    return rawIncidents.filter(inc =>
+      inc.title.toLowerCase().includes(q) ||
+      inc.location.toLowerCase().includes(q) ||
+      inc.description.toLowerCase().includes(q)
+    );
+  }, [rawIncidents, searchQuery]);
 
   const handleCitySelect = (city: City) => {
     setCurrentCity(city);
@@ -40,11 +70,17 @@ const Dashboard: React.FC = () => {
     setMobileView('map');
   };
 
-  const handleAddIncident = (newInc: Incident) => {
-    setAllCityIncidents(prev => ({
-      ...prev,
-      [currentCity.id]: [newInc, ...(prev[currentCity.id] ?? [])],
-    }));
+  const handleAddIncident = (cityId: string, newInc: Incident) => {
+    if (cityId === currentCity.id) {
+      setUserIncidents(prev => [newInc, ...prev]);
+      setSelectedIncident(newInc);
+    }
+    submitIncident(cityId, newInc).catch(err => console.error('Failed to save incident to MongoDB:', err));
+  };
+
+  const handleJoinIncident = (incidentId: string) => {
+    setVotes(prev => ({ ...prev, [incidentId]: (prev[incidentId] ?? 0) + 1 }));
+    joinIncidentVote(incidentId).catch(err => console.error('Failed to save vote to MongoDB:', err));
   };
 
   const handleMobileNavClick = (view: MobileActiveView) => {
@@ -159,7 +195,11 @@ const Dashboard: React.FC = () => {
             >
               {[
                 { label: 'Усього інцидентів', value: incidents.length * 18, color: 'var(--accent)', icon: '📋' },
-                { label: 'Оброблено ШІ', value: '100%', color: '#10B981', icon: '🤖' },
+                {
+                  label: 'Оброблено ШІ',
+                  value: `${incidents.length ? Math.round((incidents.filter(i => i.aiProcessed).length / incidents.length) * 100) : 0}%`,
+                  color: '#10B981', icon: '🤖',
+                },
                 { label: 'Критичні кризи', value: criticalCount, color: '#EF4444', icon: '⚠️' }
               ].map((m, idx) => (
                 <div
@@ -229,7 +269,9 @@ const Dashboard: React.FC = () => {
           <div className="cs-page">
             <ReportView
               currentCity={currentCity}
+              cityIncidents={rawIncidents}
               onAddIncident={handleAddIncident}
+              onJoinIncident={handleJoinIncident}
               onNavigateToMap={() => {
                 setActiveView('map');
                 setMobileView('map');

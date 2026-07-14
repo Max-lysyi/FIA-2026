@@ -10,6 +10,9 @@ interface MetricsBarProps {
 const MetricsBar: React.FC<MetricsBarProps> = ({ incidents }) => {
   const total = incidents.length * 18;
   const criticalCount = incidents.filter(i => i.priority === 'critical').length;
+  const aiProcessedPercent = incidents.length
+    ? Math.round((incidents.filter(i => i.aiProcessed).length / incidents.length) * 100)
+    : 0;
 
   const items = [
     {
@@ -22,7 +25,7 @@ const MetricsBar: React.FC<MetricsBarProps> = ({ incidents }) => {
     },
     {
       icon: <IconAI size={14} color="#10B981" />,
-      value: '100%',
+      value: `${aiProcessedPercent}%`,
       label: 'Оброблено ШІ',
       color: '#10B981',
       bg: 'rgba(16,185,129,0.10)',

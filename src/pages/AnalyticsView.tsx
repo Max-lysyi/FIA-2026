@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { CATEGORY_CONFIG, type Incident } from '../data/incidents';
 import { IconAI, IconWarning, IconPin } from '../components/Icons';
+import { generateInsight } from '../lib/insights';
 
 interface AnalyticsViewProps {
   incidents: Incident[];
@@ -76,11 +77,39 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
   const total = incidents.length * 18;
   const critical = incidents.filter(i => i.priority === 'critical').length;
 
+  const [insight, setInsight] = useState('');
+  const [isInsightLoading, setIsInsightLoading] = useState(false);
+  const [insightError, setInsightError] = useState<string | null>(null);
+
+  const incidentsKey = incidents.map(i => i.id).join(',');
+
+  const loadInsight = React.useCallback(() => {
+    setIsInsightLoading(true);
+    setInsightError(null);
+    generateInsight(incidents)
+      .then(setInsight)
+      .catch(e => setInsightError(e instanceof Error ? e.message : 'Не вдалося отримати аналіз ШІ'))
+      .finally(() => setIsInsightLoading(false));
+  }, [incidents]);
+
+  useEffect(() => {
+    loadInsight();
+  }, [incidentsKey]);
+
   const catCounts = Object.keys(CATEGORY_CONFIG).map(key => {
     const cfg = CATEGORY_CONFIG[key as keyof typeof CATEGORY_CONFIG];
     const count = incidents.filter(i => i.category === key).length;
     return { label: cfg.label, value: count || 1, color: cfg.markerColor };
   });
+
+  // Real breakdown of incidents that were actually classified by a live
+  // Aethercode call (submitted through the report form), by category.
+  const aiProcessedByCategory = Object.keys(CATEGORY_CONFIG).map(key => {
+    const cfg = CATEGORY_CONFIG[key as keyof typeof CATEGORY_CONFIG];
+    const count = incidents.filter(i => i.aiProcessed && i.category === key).length;
+    return { label: cfg.label, value: count, color: cfg.markerColor };
+  });
+  const maxAiProcessed = Math.max(1, ...aiProcessedByCategory.map(c => c.value));
 
   const resolutionTimes = [
     { label: 'ЖКГ', value: 375, color: '#3B82F6' },
@@ -99,9 +128,12 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
   const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
   const trendData = [45, 78, 62, 95, 80, 55, 70];
 
+  const aiProcessedCount = incidents.filter(i => i.aiProcessed).length;
+  const aiProcessedPercent = incidents.length ? Math.round((aiProcessedCount / incidents.length) * 100) : 0;
+
   const topMetrics = [
     { icon: '📊', value: total, label: 'Усього інцидентів за добу', color: 'var(--accent)' },
-    { icon: <IconAI size={18} color="#10B981" />, value: '100%', label: 'Оброблено ШІ автоматично', color: '#10B981' },
+    { icon: <IconAI size={18} color="#10B981" />, value: `${aiProcessedPercent}%`, label: `Оброблено ШІ автоматично (${aiProcessedCount} з ${incidents.length})`, color: '#10B981' },
     { icon: <IconWarning size={18} color="#EF4444" />, value: critical, label: 'Критичні кризи (Потребують уваги)', color: '#EF4444', pulse: true },
   ];
 
@@ -110,6 +142,41 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         <h1 className="cs-page-title">Аналітика</h1>
         <p className="cs-page-subtitle">AI-прооброблений канал пайплайн</p>
+
+        {/* AI-generated insight, based on the live incidents list */}
+        <div className="cs-glass-card" style={{ padding: 18, marginBottom: 24, display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+          <div
+            style={{
+              width: 36, height: 36, borderRadius: 12, flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)',
+            }}
+          >
+            <IconAI size={18} color="#10B981" />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>ШІ-висновок по поточних інцидентах</span>
+              <button
+                onClick={loadInsight}
+                disabled={isInsightLoading}
+                style={{
+                  fontSize: 11, fontWeight: 600, color: 'var(--accent)', background: 'transparent',
+                  border: 'none', cursor: isInsightLoading ? 'default' : 'pointer', opacity: isInsightLoading ? 0.5 : 1,
+                }}
+              >
+                {isInsightLoading ? 'Аналізую…' : '🔄 Оновити'}
+              </button>
+            </div>
+            {insightError ? (
+              <p style={{ fontSize: 12, color: '#EF4444' }}>⚠️ {insightError}</p>
+            ) : (
+              <p style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--text-secondary)' }}>
+                {isInsightLoading ? 'ШІ аналізує поточну ситуацію по місту…' : insight}
+              </p>
+            )}
+          </div>
+        </div>
 
         {/* Top metrics */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
@@ -232,24 +299,20 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
             </div>
           </div>
 
-          {/* AI efficiency */}
+          {/* AI processed breakdown — real counts, not decorative percentages */}
           <div className="cs-glass-card" style={{ padding: 20 }}>
-            <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16 }}>Ефективність ШІ парсингу</h3>
+            <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16 }}>
+              Реально оброблено ШІ ({aiProcessedCount})
+            </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {[
-                { label: 'Класифікація', value: 100, color: '#10B981' },
-                { label: 'Пріоритизація', value: 95, color: '#10B981' },
-                { label: 'Маршрутизація ЖКГ', value: 95, color: '#10B981' },
-                { label: 'Розпізнавання', value: 99, color: '#10B981' },
-                { label: 'ШІ парсинг', value: 100, color: '#10B981' },
-              ].map((item, i) => (
+              {aiProcessedByCategory.map((item, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <IconAI size={14} color={item.color} />
                   <span style={{ flex: 1, fontSize: 11, color: 'var(--text-secondary)' }}>{item.label}</span>
                   <div style={{ width: 80, height: 6, borderRadius: 4, overflow: 'hidden', background: 'var(--border-color)' }}>
-                    <div style={{ width: `${item.value}%`, height: '100%', borderRadius: 4, background: item.color }} />
+                    <div style={{ width: `${(item.value / maxAiProcessed) * 100}%`, height: '100%', borderRadius: 4, background: item.color }} />
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: 600, width: 36, textAlign: 'right', color: item.color }}>{item.value}%</span>
+                  <span style={{ fontSize: 11, fontWeight: 600, width: 36, textAlign: 'right', color: item.color }}>{item.value}</span>
                 </div>
               ))}
             </div>
