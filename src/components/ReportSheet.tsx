@@ -14,6 +14,7 @@ export interface ReportData {
   priority: 'low' | 'medium' | 'high' | 'critical';
   department: string;
   location: string;
+  aiProcessed: true;
 }
 
 type AIStep = 'idle' | 'typing' | 'analyzing' | 'done' | 'error';
@@ -51,6 +52,7 @@ const ReportSheet: React.FC<ReportSheetProps> = ({ isOpen, onClose, onSubmit }) 
         priority,
         department,
         location: 'Вінниця (автовизначення)',
+        aiProcessed: true,
       };
 
       setResult(reportData);

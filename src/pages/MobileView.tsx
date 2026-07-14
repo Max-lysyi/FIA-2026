@@ -1,28 +1,70 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import CityMap from '../components/CityMap';
 import ReportSheet, { type ReportData } from '../components/ReportSheet';
 import ThemeToggle from '../components/ThemeToggle';
 import { CITY_INCIDENTS, CITIES, type Incident } from '../data/incidents';
+import { fetchCityIncidents, submitIncident } from '../lib/incidents';
 
 const defaultCity = CITIES[0];
-const defaultIncidents = CITY_INCIDENTS[defaultCity.id];
-const RECENT_RESOLVED = defaultIncidents.filter(i => i.status === 'resolved').slice(0, 3);
 
 const MobileView: React.FC = () => {
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
+  const [userIncidents, setUserIncidents] = useState<Incident[]>([]);
+  const [votes, setVotes] = useState<Record<string, number>>({});
 
-  const handleReport = (_data: ReportData) => {
-    // mobile submit
+  useEffect(() => {
+    let cancelled = false;
+    fetchCityIncidents(defaultCity.id)
+      .then(data => {
+        if (cancelled) return;
+        setUserIncidents(data.incidents);
+        setVotes(data.votes);
+      })
+      .catch(err => console.error('Failed to load incidents from MongoDB:', err));
+    return () => { cancelled = true; };
+  }, []);
+
+  const incidents: Incident[] = useMemo(() => {
+    const seedWithVotes = CITY_INCIDENTS[defaultCity.id].map(inc =>
+      votes[inc.id] ? { ...inc, complaintsCount: inc.complaintsCount + votes[inc.id] } : inc
+    );
+    return [...userIncidents, ...seedWithVotes];
+  }, [userIncidents, votes]);
+
+  const RECENT_RESOLVED = incidents.filter(i => i.status === 'resolved').slice(0, 3);
+  const criticalCount = incidents.filter(i => i.priority === 'critical').length;
+  const aiProcessedPercent = incidents.length
+    ? Math.round((incidents.filter(i => i.aiProcessed).length / incidents.length) * 100)
+    : 0;
+
+  const handleReport = (data: ReportData) => {
+    const newIncident: Incident = {
+      id: `inc-${Date.now()}`,
+      title: data.text.split('.')[0].slice(0, 60) || 'Новий інцидент',
+      description: data.text,
+      category: data.category,
+      status: 'new',
+      priority: data.priority,
+      location: data.location,
+      lat: defaultCity.lat + (Math.random() - 0.5) * 0.008,
+      lng: defaultCity.lng + (Math.random() - 0.5) * 0.008,
+      complaintsCount: 1,
+      timeAgo: 'Щойно',
+      department: data.department,
+      aiProcessed: data.aiProcessed,
+    };
+
+    setUserIncidents(prev => [newIncident, ...prev]);
+    submitIncident(defaultCity.id, newIncident).catch(err => console.error('Failed to save incident to MongoDB:', err));
   };
-
 
   return (
     <div className="relative w-screen h-screen overflow-hidden">
       {/* Full-screen Map */}
       <div className="absolute inset-0">
         <CityMap
-          incidents={defaultIncidents}
+          incidents={incidents}
           city={defaultCity}
           selectedIncident={selectedIncident}
           onSelectIncident={setSelectedIncident}
@@ -84,17 +126,17 @@ const MobileView: React.FC = () => {
         >
           <div className="flex items-center gap-1">
             <span style={{ color: '#EF4444' }}>●</span>
-            <span style={{ color: 'var(--text-secondary)' }}>3 критичних</span>
+            <span style={{ color: 'var(--text-secondary)' }}>{criticalCount} критичних</span>
           </div>
           <div className="w-px h-3" style={{ background: 'var(--border-color)' }} />
           <div className="flex items-center gap-1">
             <span style={{ color: '#10B981' }}>●</span>
-            <span style={{ color: 'var(--text-secondary)' }}>142 за добу</span>
+            <span style={{ color: 'var(--text-secondary)' }}>{incidents.length} за добу</span>
           </div>
           <div className="w-px h-3" style={{ background: 'var(--border-color)' }} />
           <div className="flex items-center gap-1">
             <span style={{ color: 'var(--accent)' }}>AI</span>
-            <span style={{ color: 'var(--text-secondary)' }}>100%</span>
+            <span style={{ color: 'var(--text-secondary)' }}>{aiProcessedPercent}%</span>
           </div>
         </div>
 

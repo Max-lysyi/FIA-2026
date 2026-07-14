@@ -102,6 +102,15 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
     return { label: cfg.label, value: count || 1, color: cfg.markerColor };
   });
 
+  // Real breakdown of incidents that were actually classified by a live
+  // Aethercode call (submitted through the report form), by category.
+  const aiProcessedByCategory = Object.keys(CATEGORY_CONFIG).map(key => {
+    const cfg = CATEGORY_CONFIG[key as keyof typeof CATEGORY_CONFIG];
+    const count = incidents.filter(i => i.aiProcessed && i.category === key).length;
+    return { label: cfg.label, value: count, color: cfg.markerColor };
+  });
+  const maxAiProcessed = Math.max(1, ...aiProcessedByCategory.map(c => c.value));
+
   const resolutionTimes = [
     { label: 'ЖКГ', value: 375, color: '#3B82F6' },
     { label: 'Екологія', value: 198, color: '#10B981' },
@@ -119,9 +128,12 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
   const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
   const trendData = [45, 78, 62, 95, 80, 55, 70];
 
+  const aiProcessedCount = incidents.filter(i => i.aiProcessed).length;
+  const aiProcessedPercent = incidents.length ? Math.round((aiProcessedCount / incidents.length) * 100) : 0;
+
   const topMetrics = [
     { icon: '📊', value: total, label: 'Усього інцидентів за добу', color: 'var(--accent)' },
-    { icon: <IconAI size={18} color="#10B981" />, value: '100%', label: 'Оброблено ШІ автоматично', color: '#10B981' },
+    { icon: <IconAI size={18} color="#10B981" />, value: `${aiProcessedPercent}%`, label: `Оброблено ШІ автоматично (${aiProcessedCount} з ${incidents.length})`, color: '#10B981' },
     { icon: <IconWarning size={18} color="#EF4444" />, value: critical, label: 'Критичні кризи (Потребують уваги)', color: '#EF4444', pulse: true },
   ];
 
@@ -287,24 +299,20 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
             </div>
           </div>
 
-          {/* AI efficiency */}
+          {/* AI processed breakdown — real counts, not decorative percentages */}
           <div className="cs-glass-card" style={{ padding: 20 }}>
-            <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16 }}>Ефективність ШІ парсингу</h3>
+            <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16 }}>
+              Реально оброблено ШІ ({aiProcessedCount})
+            </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {[
-                { label: 'Класифікація', value: 100, color: '#10B981' },
-                { label: 'Пріоритизація', value: 95, color: '#10B981' },
-                { label: 'Маршрутизація ЖКГ', value: 95, color: '#10B981' },
-                { label: 'Розпізнавання', value: 99, color: '#10B981' },
-                { label: 'ШІ парсинг', value: 100, color: '#10B981' },
-              ].map((item, i) => (
+              {aiProcessedByCategory.map((item, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <IconAI size={14} color={item.color} />
                   <span style={{ flex: 1, fontSize: 11, color: 'var(--text-secondary)' }}>{item.label}</span>
                   <div style={{ width: 80, height: 6, borderRadius: 4, overflow: 'hidden', background: 'var(--border-color)' }}>
-                    <div style={{ width: `${item.value}%`, height: '100%', borderRadius: 4, background: item.color }} />
+                    <div style={{ width: `${(item.value / maxAiProcessed) * 100}%`, height: '100%', borderRadius: 4, background: item.color }} />
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: 600, width: 36, textAlign: 'right', color: item.color }}>{item.value}%</span>
+                  <span style={{ fontSize: 11, fontWeight: 600, width: 36, textAlign: 'right', color: item.color }}>{item.value}</span>
                 </div>
               ))}
             </div>

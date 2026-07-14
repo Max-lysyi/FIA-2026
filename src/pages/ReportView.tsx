@@ -82,6 +82,7 @@ const ReportView: React.FC<ReportViewProps> = ({ currentCity, cityIncidents, onA
   const [showSecondWarning, setShowSecondWarning] = useState(false);
   const [submitPlan, setSubmitPlan] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [aiProcessed, setAiProcessed] = useState(false);
 
   // Real duplicate detection: find an existing open incident whose address
   // roughly matches what was typed, then look for other open incidents within
@@ -136,6 +137,7 @@ const ReportView: React.FC<ReportViewProps> = ({ currentCity, cityIncidents, onA
       setCategory(result.category);
       setAiDept(result.department);
       setUrgency(result.priority === 'critical' ? 5 : result.priority === 'high' ? 4 : result.priority === 'medium' ? 3 : 2);
+      setAiProcessed(true);
     } catch (e) {
       setAiError(e instanceof Error ? e.message : 'Не вдалося отримати відповідь ШІ');
     } finally {
@@ -165,6 +167,7 @@ const ReportView: React.FC<ReportViewProps> = ({ currentCity, cityIncidents, onA
       timeAgo: 'Щойно',
       department: aiDept,
       beforePhoto: photoPreview || undefined,
+      aiProcessed,
     };
 
     if (user?.isLoggedIn) addPoints(10, `Інцидент: ${newIncident.title.slice(0, 30)}...`);
@@ -294,7 +297,7 @@ const ReportView: React.FC<ReportViewProps> = ({ currentCity, cityIncidents, onA
               <textarea
                 className="cs-form-textarea"
                 value={description}
-                onChange={e => setDescription(e.target.value)}
+                onChange={e => { setDescription(e.target.value); setAiProcessed(false); }}
                 placeholder="Опишіть своїми словами... (ШІ покращить та структурує опис)"
               />
               <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>

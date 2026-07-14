@@ -17,6 +17,11 @@ export interface Incident {
   department: string;
   beforePhoto?: string;
   afterPhoto?: string;
+  // True only for reports whose category/priority/department/description
+  // actually came back from a live Aethercode API call (submitted through
+  // the report form). Seed/demo incidents don't set this, since they were
+  // never really run through the AI pipeline.
+  aiProcessed?: boolean;
 }
 
 export interface City {
