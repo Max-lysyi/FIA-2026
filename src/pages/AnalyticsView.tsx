@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { CATEGORY_CONFIG, type Incident } from '../data/incidents';
 import { IconAI, IconWarning, IconPin } from '../components/Icons';
+import { generateInsight } from '../lib/insights';
 
 interface AnalyticsViewProps {
   incidents: Incident[];
@@ -76,6 +77,25 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
   const total = incidents.length * 18;
   const critical = incidents.filter(i => i.priority === 'critical').length;
 
+  const [insight, setInsight] = useState('');
+  const [isInsightLoading, setIsInsightLoading] = useState(false);
+  const [insightError, setInsightError] = useState<string | null>(null);
+
+  const incidentsKey = incidents.map(i => i.id).join(',');
+
+  const loadInsight = React.useCallback(() => {
+    setIsInsightLoading(true);
+    setInsightError(null);
+    generateInsight(incidents)
+      .then(setInsight)
+      .catch(e => setInsightError(e instanceof Error ? e.message : 'Не вдалося отримати аналіз ШІ'))
+      .finally(() => setIsInsightLoading(false));
+  }, [incidents]);
+
+  useEffect(() => {
+    loadInsight();
+  }, [incidentsKey]);
+
   const catCounts = Object.keys(CATEGORY_CONFIG).map(key => {
     const cfg = CATEGORY_CONFIG[key as keyof typeof CATEGORY_CONFIG];
     const count = incidents.filter(i => i.category === key).length;
@@ -110,6 +130,41 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         <h1 className="cs-page-title">Аналітика</h1>
         <p className="cs-page-subtitle">AI-прооброблений канал пайплайн</p>
+
+        {/* AI-generated insight, based on the live incidents list */}
+        <div className="cs-glass-card" style={{ padding: 18, marginBottom: 24, display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+          <div
+            style={{
+              width: 36, height: 36, borderRadius: 12, flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)',
+            }}
+          >
+            <IconAI size={18} color="#10B981" />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>ШІ-висновок по поточних інцидентах</span>
+              <button
+                onClick={loadInsight}
+                disabled={isInsightLoading}
+                style={{
+                  fontSize: 11, fontWeight: 600, color: 'var(--accent)', background: 'transparent',
+                  border: 'none', cursor: isInsightLoading ? 'default' : 'pointer', opacity: isInsightLoading ? 0.5 : 1,
+                }}
+              >
+                {isInsightLoading ? 'Аналізую…' : '🔄 Оновити'}
+              </button>
+            </div>
+            {insightError ? (
+              <p style={{ fontSize: 12, color: '#EF4444' }}>⚠️ {insightError}</p>
+            ) : (
+              <p style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--text-secondary)' }}>
+                {isInsightLoading ? 'ШІ аналізує поточну ситуацію по місту…' : insight}
+              </p>
+            )}
+          </div>
+        </div>
 
         {/* Top metrics */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
