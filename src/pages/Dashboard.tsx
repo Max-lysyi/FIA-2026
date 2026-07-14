@@ -186,7 +186,11 @@ const Dashboard: React.FC = () => {
             >
               {[
                 { label: 'Усього інцидентів', value: incidents.length * 18, color: 'var(--accent)', icon: '📋' },
-                { label: 'Оброблено ШІ', value: '100%', color: '#10B981', icon: '🤖' },
+                {
+                  label: 'Оброблено ШІ',
+                  value: `${incidents.length ? Math.round((incidents.filter(i => i.aiProcessed).length / incidents.length) * 100) : 0}%`,
+                  color: '#10B981', icon: '🤖',
+                },
                 { label: 'Критичні кризи', value: criticalCount, color: '#EF4444', icon: '⚠️' }
               ].map((m, idx) => (
                 <div
