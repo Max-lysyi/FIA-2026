@@ -64,9 +64,12 @@ const Dashboard: React.FC = () => {
     setMobileView('map');
   };
 
-  const handleAddIncident = (newInc: Incident) => {
-    setUserIncidents(prev => [newInc, ...prev]);
-    submitIncident(currentCity.id, newInc).catch(err => console.error('Failed to save incident to MongoDB:', err));
+  const handleAddIncident = (cityId: string, newInc: Incident) => {
+    if (cityId === currentCity.id) {
+      setUserIncidents(prev => [newInc, ...prev]);
+      setSelectedIncident(newInc);
+    }
+    submitIncident(cityId, newInc).catch(err => console.error('Failed to save incident to MongoDB:', err));
   };
 
   const handleJoinIncident = (incidentId: string) => {

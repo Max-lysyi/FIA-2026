@@ -2,11 +2,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { CATEGORY_CONFIG, type Incident, type City, CITIES } from '../data/incidents';
 import { useAuth } from '../context/AuthContext';
 import { classifyIncident } from '../lib/ai';
+import LocationPicker from '../components/LocationPicker';
 
 interface ReportViewProps {
   currentCity: City;
   cityIncidents: Incident[];
-  onAddIncident: (incident: Incident) => void;
+  onAddIncident: (cityId: string, incident: Incident) => void;
   onJoinIncident: (incidentId: string) => void;
   onNavigateToMap: () => void;
 }
@@ -71,7 +72,8 @@ const ReportView: React.FC<ReportViewProps> = ({ currentCity, cityIncidents, onA
   const [address, setAddress] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [filteredStreets, setFilteredStreets] = useState<string[]>([]);
-  const [cityId, setCityId] = useState(CITIES.find(c => c.id === 'khmelnytskyi')?.id ?? currentCity.id);
+  const [cityId, setCityId] = useState(currentCity.id);
+  const [point, setPoint] = useState({ lat: currentCity.lat, lng: currentCity.lng });
   const [timeFound, setTimeFound] = useState('');
   const [description, setDescription] = useState('');
   const [isCopilotRunning, setIsCopilotRunning] = useState(false);
@@ -152,7 +154,6 @@ const ReportView: React.FC<ReportViewProps> = ({ currentCity, cityIncidents, onA
 
   const handleCloseOverlayAndAdd = () => {
     setSubmitPlan(false);
-    const selectedCity = CITIES.find(c => c.id === cityId) || currentCity;
     const newIncident: Incident = {
       id: `inc-${Date.now()}`,
       title: description.split('.')[0].slice(0, 60) || 'Новий інцидент',
@@ -160,9 +161,9 @@ const ReportView: React.FC<ReportViewProps> = ({ currentCity, cityIncidents, onA
       category,
       status: 'new',
       priority: urgency === 5 ? 'critical' : urgency >= 4 ? 'high' : urgency >= 2 ? 'medium' : 'low',
-      location: address || 'Локація визначена за GPS',
-      lat: selectedCity.lat + (Math.random() - 0.5) * 0.008,
-      lng: selectedCity.lng + (Math.random() - 0.5) * 0.008,
+      location: address || `Точка на мапі (${point.lat.toFixed(4)}, ${point.lng.toFixed(4)})`,
+      lat: point.lat,
+      lng: point.lng,
       complaintsCount: 1,
       timeAgo: 'Щойно',
       department: aiDept,
@@ -171,7 +172,7 @@ const ReportView: React.FC<ReportViewProps> = ({ currentCity, cityIncidents, onA
     };
 
     if (user?.isLoggedIn) addPoints(10, `Інцидент: ${newIncident.title.slice(0, 30)}...`);
-    onAddIncident(newIncident);
+    onAddIncident(cityId, newIncident);
     onNavigateToMap();
   };
 
@@ -225,7 +226,11 @@ const ReportView: React.FC<ReportViewProps> = ({ currentCity, cityIncidents, onA
                   <select
                     className="cs-form-select"
                     value={cityId}
-                    onChange={e => setCityId(e.target.value)}
+                    onChange={e => {
+                      const next = CITIES.find(c => c.id === e.target.value);
+                      setCityId(e.target.value);
+                      if (next) setPoint({ lat: next.lat, lng: next.lng });
+                    }}
                   >
                     {CITIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
@@ -246,6 +251,20 @@ const ReportView: React.FC<ReportViewProps> = ({ currentCity, cityIncidents, onA
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Location picker — click or drag the pin to mark the exact spot */}
+            <div className="cs-form-card">
+              <div className="cs-form-card__title">🗺️ Точка на мапі</div>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 10 }}>
+                Клікніть на мапі або перетягніть маркер, щоб вказати точне місце проблеми
+              </p>
+              <div style={{ width: '100%', height: 220, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+                <LocationPicker lat={point.lat} lng={point.lng} zoom={14} onChange={(lat, lng) => setPoint({ lat, lng })} />
+              </div>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
+                📍 {point.lat.toFixed(5)}, {point.lng.toFixed(5)}
+              </p>
             </div>
 
             {/* Media drag & drop */}

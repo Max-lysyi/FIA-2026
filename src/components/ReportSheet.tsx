@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { CATEGORY_CONFIG, type IncidentCategory } from '../data/incidents';
 import { classifyIncident } from '../lib/ai';
+import LocationPicker from './LocationPicker';
 
 interface ReportSheetProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: ReportData) => void;
+  cityCenter: { lat: number; lng: number };
 }
 
 export interface ReportData {
@@ -14,21 +16,25 @@ export interface ReportData {
   priority: 'low' | 'medium' | 'high' | 'critical';
   department: string;
   location: string;
+  lat: number;
+  lng: number;
   aiProcessed: true;
 }
 
 type AIStep = 'idle' | 'typing' | 'analyzing' | 'done' | 'error';
 
-const ReportSheet: React.FC<ReportSheetProps> = ({ isOpen, onClose, onSubmit }) => {
+const ReportSheet: React.FC<ReportSheetProps> = ({ isOpen, onClose, onSubmit, cityCenter }) => {
   const [text, setText] = useState('');
   const [aiStep, setAiStep] = useState<AIStep>('idle');
   const [result, setResult] = useState<ReportData | null>(null);
   const [isInputActive, setIsInputActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [point, setPoint] = useState(cityCenter);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (isOpen) {
+      setPoint(cityCenter);
       setTimeout(() => textareaRef.current?.focus(), 300);
     } else {
       setText('');
@@ -36,6 +42,7 @@ const ReportSheet: React.FC<ReportSheetProps> = ({ isOpen, onClose, onSubmit }) 
       setResult(null);
       setError(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   const handleSubmit = async () => {
@@ -51,7 +58,9 @@ const ReportSheet: React.FC<ReportSheetProps> = ({ isOpen, onClose, onSubmit }) 
         category,
         priority,
         department,
-        location: 'Вінниця (автовизначення)',
+        location: `Точка на мапі (${point.lat.toFixed(4)}, ${point.lng.toFixed(4)})`,
+        lat: point.lat,
+        lng: point.lng,
         aiProcessed: true,
       };
 
@@ -120,6 +129,16 @@ const ReportSheet: React.FC<ReportSheetProps> = ({ isOpen, onClose, onSubmit }) 
                   fontFamily: 'Inter, sans-serif',
                 }}
               />
+            </div>
+
+            {/* Location picker */}
+            <div className="mb-4">
+              <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
+                🗺️ Торкніться мапи, щоб вказати точне місце
+              </p>
+              <div style={{ width: '100%', height: 160, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+                <LocationPicker lat={point.lat} lng={point.lng} zoom={13} onChange={(lat, lng) => setPoint({ lat, lng })} />
+              </div>
             </div>
 
             {/* Submit */}

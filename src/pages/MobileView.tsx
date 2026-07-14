@@ -47,8 +47,8 @@ const MobileView: React.FC = () => {
       status: 'new',
       priority: data.priority,
       location: data.location,
-      lat: defaultCity.lat + (Math.random() - 0.5) * 0.008,
-      lng: defaultCity.lng + (Math.random() - 0.5) * 0.008,
+      lat: data.lat,
+      lng: data.lng,
       complaintsCount: 1,
       timeAgo: 'Щойно',
       department: data.department,
@@ -56,6 +56,7 @@ const MobileView: React.FC = () => {
     };
 
     setUserIncidents(prev => [newIncident, ...prev]);
+    setSelectedIncident(newIncident);
     submitIncident(defaultCity.id, newIncident).catch(err => console.error('Failed to save incident to MongoDB:', err));
   };
 
@@ -161,6 +162,7 @@ const MobileView: React.FC = () => {
         isOpen={isReportOpen}
         onClose={() => setIsReportOpen(false)}
         onSubmit={handleReport}
+        cityCenter={{ lat: defaultCity.lat, lng: defaultCity.lng }}
       />
     </div>
   );
