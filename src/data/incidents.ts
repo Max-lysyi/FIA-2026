@@ -80,108 +80,64 @@ export const CATEGORY_CONFIG = {
 
 // ─── ВІННИЦЯ ───────────────────────────────────────────────────────────
 const VINNYTSIA_INCIDENTS: Incident[] = [
-  {
-    id: 'v1', title: 'Зламане дерево перекрило дорогу', description: 'Велике дерево впало та перекрило проїжджу частину', category: 'critical', status: 'processing', priority: 'critical', location: 'вул. Соборна', lat: 49.2337, lng: 28.4682, complaintsCount: 12, timeAgo: '5 хв тому', department: 'КП Зеленгосп', beforePhoto: 'https://images.unsplash.com/photo-1504701954957-2010ec3bcec1?w=400&h=250&fit=crop', afterPhoto: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=250&fit=crop',
-  },
-  {
-    id: 'v2', title: 'ЖКГ аварія — прорив труби', description: 'Прорив водопровідної труби, вода затопила підвал', category: 'utility', status: 'processing', priority: 'critical', location: 'вул. Хмельницьке шосе', lat: 49.2298, lng: 28.4720, complaintsCount: 8, timeAgo: '15 хв тому', department: 'Вінницяводоканал',
-  },
-  {
-    id: 'v3', title: 'Забруднення водойми, запах хімії', description: 'Смердить хімією біля Південного Бугу', category: 'ecology', status: 'processing', priority: 'high', location: 'Пд. Буг', lat: 49.2328, lng: 28.4665, complaintsCount: 3, timeAgo: '2 хв тому', department: 'Екологічна служба',
-  },
-  {
-    id: 'v4', title: 'Не працює світлофор', description: 'Вийшов з ладу світлофор на перехресті', category: 'transport', status: 'new', priority: 'high', location: 'вул. Грушевського', lat: 49.2358, lng: 28.4640, complaintsCount: 5, timeAgo: '8 хв тому', department: 'Служба дорожнього руху',
-  },
-  {
-    id: 'v5', title: 'Незаконне сміттєзвалище', description: 'У парку виявлено незаконне сміттєзвалище', category: 'ecology', status: 'new', priority: 'high', location: 'Центральний парк', lat: 49.2368, lng: 28.4760, complaintsCount: 7, timeAgo: '20 хв тому', department: 'Екологічна служба',
-  },
-  {
-    id: 'v6', title: 'Вибоїни на дорозі', description: 'Численні глибокі вибоїни на проїжджій частині', category: 'transport', status: 'processing', priority: 'medium', location: 'вул. Київська', lat: 49.2280, lng: 28.4650, complaintsCount: 9, timeAgo: '35 хв тому', department: 'Служба доріг',
-  },
-  {
-    id: 'v7', title: 'Неякісний стан тротуару', description: 'Великі ями на тротуарі, небезпечно для пішоходів', category: 'infrastructure', status: 'new', priority: 'medium', location: 'вул. Подільська', lat: 49.2318, lng: 28.4698, complaintsCount: 3, timeAgo: '3 хв тому', department: 'ЖКГ',
-  },
-  {
-    id: 'v8', title: 'Гілку на вул. Подільській прибрано', description: 'Комунальна служба прибрала аварійне дерево', category: 'ecology', status: 'resolved', priority: 'low', location: 'вул. Подільська', lat: 49.2345, lng: 28.4710, complaintsCount: 1, timeAgo: '10 хв тому', department: 'КП Зеленгосп', beforePhoto: 'https://images.unsplash.com/photo-1504701954957-2010ec3bcec1?w=400&h=250&fit=crop', afterPhoto: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=250&fit=crop',
-  },
+  { id: 'v1', title: 'Зламане дерево перекрило дорогу', description: 'Велике дерево впало та перекрило проїжджу частину', category: 'critical', status: 'processing', priority: 'critical', location: 'вул. Соборна, 43', lat: 49.23372, lng: 28.46812, complaintsCount: 12, timeAgo: '5 хв тому', department: 'КП Зеленгосп', beforePhoto: 'https://images.unsplash.com/photo-1504701954957-2010ec3bcec1?w=400&h=250&fit=crop', afterPhoto: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=250&fit=crop' },
+  { id: 'v2', title: 'ЖКГ аварія — прорив труби', description: 'Прорив водопровідної труби, вода затопила підвал', category: 'utility', status: 'processing', priority: 'critical', location: 'вул. Хмельницьке шосе, 12', lat: 49.24415, lng: 28.48302, complaintsCount: 8, timeAgo: '15 хв тому', department: 'Вінницяводоканал' },
+  { id: 'v3', title: 'Забруднення водойми, запах хімії', description: 'Смердить хімією біля Південного Бугу в районі мосту', category: 'ecology', status: 'processing', priority: 'high', location: 'Пд. Буг, Кемпінг', lat: 49.22103, lng: 28.45184, complaintsCount: 3, timeAgo: '2 хв тому', department: 'Екологічна служба' },
+  { id: 'v4', title: 'Не працює світлофор', description: 'Вийшов з ладу світлофор на перехресті вулиць', category: 'transport', status: 'new', priority: 'high', location: 'вул. Грушевського / Хмельницьке шосе', lat: 49.23891, lng: 28.47726, complaintsCount: 5, timeAgo: '8 хв тому', department: 'Служба дорожнього руху' },
+  { id: 'v5', title: 'Незаконне сміттєзвалище', description: 'У Центральному парку виявлено незаконне сміттєзвалище', category: 'ecology', status: 'new', priority: 'high', location: 'Центральний міський парк', lat: 49.23015, lng: 28.44638, complaintsCount: 7, timeAgo: '20 хв тому', department: 'Екологічна служба' },
+  { id: 'v6', title: 'Вибоїни на дорозі', description: 'Численні глибокі вибоїни на проїжджій частині', category: 'transport', status: 'processing', priority: 'medium', location: 'вул. Київська, 24', lat: 49.25012, lng: 28.49145, complaintsCount: 9, timeAgo: '35 хв тому', department: 'Служба доріг' },
+  { id: 'v7', title: 'Неякісний стан тротуару', description: 'Великі ями на тротуарі, небезпечно для пішоходів', category: 'infrastructure', status: 'new', priority: 'medium', location: 'вул. Пирогова, 7', lat: 49.22581, lng: 28.47893, complaintsCount: 3, timeAgo: '3 хв тому', department: 'ЖКГ' },
+  { id: 'v8', title: 'Гілку на вул. Порика прибрано', description: 'Комунальна служба прибрала аварійне дерево', category: 'ecology', status: 'resolved', priority: 'low', location: 'вул. Порика, 15', lat: 49.24186, lng: 28.45521, complaintsCount: 1, timeAgo: '10 хв тому', department: 'КП Зеленгосп', beforePhoto: 'https://images.unsplash.com/photo-1504701954957-2010ec3bcec1?w=400&h=250&fit=crop', afterPhoto: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=250&fit=crop' },
+  { id: 'v9', title: 'Провалля в асфальті на мосту', description: 'На Пироговському мосту утворилась глибока яма', category: 'transport', status: 'new', priority: 'critical', location: 'Пироговський міст', lat: 49.22759, lng: 28.46015, complaintsCount: 14, timeAgo: '25 хв тому', department: 'Служба доріг' },
+  { id: 'v10', title: 'Не вивозиться сміття', description: 'Контейнерний майданчик переповнений вже тиждень', category: 'ecology', status: 'processing', priority: 'medium', location: 'вул. Немирівське шосе, 108', lat: 49.20951, lng: 28.49872, complaintsCount: 11, timeAgo: '1 год тому', department: 'КП Спецкомунтранс' },
+  { id: 'v11', title: 'Аварійне освітлення у дворі', description: 'Не працюють ліхтарі у дворі багатоповерхівки', category: 'infrastructure', status: 'new', priority: 'low', location: 'вул. Келецька, 55', lat: 49.21634, lng: 28.44219, complaintsCount: 4, timeAgo: '2 год тому', department: 'КП Міськсвітло' },
+  { id: 'v12', title: 'Розлив пального на заправці', description: 'На АЗС стався розлив пального, ризик займання', category: 'critical', status: 'processing', priority: 'critical', location: 'вул. 600-річчя, 21', lat: 49.23784, lng: 28.50213, complaintsCount: 6, timeAgo: '12 хв тому', department: 'ДСНС' },
 ];
 
 // ─── ЖИТОМИР ───────────────────────────────────────────────────────────
 const ZHYTOMYR_INCIDENTS: Incident[] = [
-  {
-    id: 'zh1', title: 'Прорив каналізаційної труби', description: 'Каналізаційні стоки виходять на поверхню дороги', category: 'utility', status: 'processing', priority: 'critical', location: 'вул. Велика Бердичівська', lat: 50.2578, lng: 28.6612, complaintsCount: 15, timeAgo: '3 хв тому', department: 'Житомирводоканал',
-  },
-  {
-    id: 'zh2', title: 'Пошкоджено освітлення на вулиці', description: 'Декілька ліхтарів не працюють, небезпечно вночі', category: 'infrastructure', status: 'new', priority: 'medium', location: 'вул. Київська', lat: 50.2530, lng: 28.6540, complaintsCount: 4, timeAgo: '1 год тому', department: 'КП Міськсвітло',
-  },
-  {
-    id: 'zh3', title: 'Самовільне будівництво у парку', description: 'Незаконне будівництво на території міського парку', category: 'ecology', status: 'new', priority: 'high', location: 'Парк культури', lat: 50.2560, lng: 28.6700, complaintsCount: 22, timeAgo: '2 год тому', department: 'Архітектурний відділ',
-  },
-  {
-    id: 'zh4', title: 'Затор через ремонт дороги', description: 'Дорожній ремонт спричинив великі затори', category: 'transport', status: 'processing', priority: 'medium', location: 'пр. Миру', lat: 50.2510, lng: 28.6580, complaintsCount: 6, timeAgo: '30 хв тому', department: 'Служба доріг',
-  },
-  {
-    id: 'zh5', title: 'Забруднення р. Тетерів', description: 'Скид відходів у річку Тетерів', category: 'ecology', status: 'processing', priority: 'critical', location: 'р. Тетерів', lat: 50.2490, lng: 28.6450, complaintsCount: 18, timeAgo: '45 хв тому', department: 'Екологічна служба',
-  },
-  {
-    id: 'zh6', title: 'Тріщина в асфальті', description: 'Велика тріщина в дорожньому покритті', category: 'transport', status: 'new', priority: 'low', location: 'вул. Лесі Українки', lat: 50.2600, lng: 28.6620, complaintsCount: 2, timeAgo: '3 год тому', department: 'Служба доріг',
-  },
-  {
-    id: 'zh7', title: 'Відремонтовано тротуар ✅', description: 'Успішно відремонтовано тротуар після скарг', category: 'infrastructure', status: 'resolved', priority: 'low', location: 'вул. Пушкінська', lat: 50.2545, lng: 28.6670, complaintsCount: 3, timeAgo: '5 год тому', department: 'ЖКГ', beforePhoto: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=250&fit=crop', afterPhoto: 'https://images.unsplash.com/photo-1504701954957-2010ec3bcec1?w=400&h=250&fit=crop',
-  },
+  { id: 'zh1', title: 'Прорив каналізаційної труби', description: 'Каналізаційні стоки виходять на поверхню дороги', category: 'utility', status: 'processing', priority: 'critical', location: 'вул. Велика Бердичівська, 40', lat: 50.25781, lng: 28.66124, complaintsCount: 15, timeAgo: '3 хв тому', department: 'Житомирводоканал' },
+  { id: 'zh2', title: 'Пошкоджено освітлення на вулиці', description: 'Декілька ліхтарів не працюють, небезпечно вночі', category: 'infrastructure', status: 'new', priority: 'medium', location: 'вул. Київська, 77', lat: 50.24698, lng: 28.65403, complaintsCount: 4, timeAgo: '1 год тому', department: 'КП Міськсвітло' },
+  { id: 'zh3', title: 'Самовільне будівництво у парку', description: 'Незаконне будівництво на території міського парку', category: 'ecology', status: 'new', priority: 'high', location: 'Гідропарк ім. Гагаріна', lat: 50.26312, lng: 28.67281, complaintsCount: 22, timeAgo: '2 год тому', department: 'Архітектурний відділ' },
+  { id: 'zh4', title: 'Затор через ремонт дороги', description: 'Дорожній ремонт спричинив великі затори', category: 'transport', status: 'processing', priority: 'medium', location: 'пр. Миру, 12', lat: 50.24512, lng: 28.68134, complaintsCount: 6, timeAgo: '30 хв тому', department: 'Служба доріг' },
+  { id: 'zh5', title: 'Забруднення р. Тетерів', description: 'Скид відходів у річку Тетерів поблизу мосту', category: 'ecology', status: 'processing', priority: 'critical', location: 'р. Тетерів, Каштановий міст', lat: 50.27015, lng: 28.65891, complaintsCount: 18, timeAgo: '45 хв тому', department: 'Екологічна служба' },
+  { id: 'zh6', title: 'Тріщина в асфальті', description: 'Велика тріщина в дорожньому покритті', category: 'transport', status: 'new', priority: 'low', location: 'вул. Лесі Українки, 3', lat: 50.25012, lng: 28.64215, complaintsCount: 2, timeAgo: '3 год тому', department: 'Служба доріг' },
+  { id: 'zh7', title: 'Відремонтовано тротуар ✅', description: 'Успішно відремонтовано тротуар після скарг', category: 'infrastructure', status: 'resolved', priority: 'low', location: 'вул. Пушкінська, 21', lat: 50.25893, lng: 28.66782, complaintsCount: 3, timeAgo: '5 год тому', department: 'ЖКГ', beforePhoto: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=250&fit=crop', afterPhoto: 'https://images.unsplash.com/photo-1504701954957-2010ec3bcec1?w=400&h=250&fit=crop' },
+  { id: 'zh8', title: 'Провалля тротуару біля школи', description: 'Просів тротуар поруч зі шкільним подвір\'ям', category: 'infrastructure', status: 'new', priority: 'high', location: 'вул. Чуднівська, 89', lat: 50.24215, lng: 28.66592, complaintsCount: 9, timeAgo: '40 хв тому', department: 'ЖКГ' },
+  { id: 'zh9', title: 'Задимлення на промзоні', description: 'Сильне задимлення від підприємства в промзоні', category: 'ecology', status: 'processing', priority: 'high', location: 'вул. Промислова, 5', lat: 50.28104, lng: 28.64327, complaintsCount: 13, timeAgo: '55 хв тому', department: 'Екологічна служба' },
+  { id: 'zh10', title: 'Не працює пішохідний перехід', description: 'Розбите світло на регульованому переході', category: 'transport', status: 'new', priority: 'medium', location: 'вул. Перемоги, 33', lat: 50.26541, lng: 28.63982, complaintsCount: 7, timeAgo: '1 год тому', department: 'Служба дорожнього руху' },
+  { id: 'zh11', title: 'Аварія водопроводу у дворі', description: 'Прорвало трубу у дворі багатоповерхівки', category: 'utility', status: 'processing', priority: 'critical', location: 'мкр Крошня, буд. 14', lat: 50.23621, lng: 28.62894, complaintsCount: 20, timeAgo: '18 хв тому', department: 'Житомирводоканал' },
 ];
 
 // ─── ХМЕЛЬНИЦЬКИЙ ──────────────────────────────────────────────────────
 const KHMELNYTSKYI_INCIDENTS: Incident[] = [
-  {
-    id: 'kh1', title: 'Аварійний стан будівлі', description: 'Стара будівля загрожує обваленням', category: 'critical', status: 'processing', priority: 'critical', location: 'вул. Проскурівська', lat: 49.4250, lng: 26.9990, complaintsCount: 25, timeAgo: '10 хв тому', department: 'ДСНС',
-  },
-  {
-    id: 'kh2', title: 'Відсутність опалення у будинку', description: 'Мешканці будинку без тепла вже 3 дні', category: 'utility', status: 'processing', priority: 'critical', location: 'мкр Озерний', lat: 49.4185, lng: 26.9920, complaintsCount: 40, timeAgo: '2 год тому', department: 'Теплокомуненерго',
-  },
-  {
-    id: 'kh3', title: 'Вирубка дерев у сквері', description: 'Несанкціонована вирубка дерев у міському сквері', category: 'ecology', status: 'new', priority: 'high', location: 'Сквер Перемоги', lat: 49.4230, lng: 27.0020, complaintsCount: 30, timeAgo: '1 год тому', department: 'Екологічна служба',
-  },
-  {
-    id: 'kh4', title: 'Погана розмітка на дорозі', description: 'Дорожня розмітка стерлась, небезпечно для водіїв', category: 'transport', status: 'new', priority: 'medium', location: 'вул. Шевченка', lat: 49.4200, lng: 26.9940, complaintsCount: 8, timeAgo: '4 год тому', department: 'Служба дорожнього руху',
-  },
-  {
-    id: 'kh5', title: 'Зруйновані лавки в парку', description: 'Вандали пошкодили лавки у парку Перемоги', category: 'infrastructure', status: 'new', priority: 'low', location: 'Парк Перемоги', lat: 49.4260, lng: 26.9970, complaintsCount: 5, timeAgo: '6 год тому', department: 'ЖКГ',
-  },
-  {
-    id: 'kh6', title: 'Ліквідовано аварію водопроводу ✅', description: 'Аварія на водопроводі успішно ліквідована', category: 'utility', status: 'resolved', priority: 'low', location: 'вул. Заводська', lat: 49.4170, lng: 26.9900, complaintsCount: 12, timeAgo: '8 год тому', department: 'Хмельниківодоканал', beforePhoto: 'https://images.unsplash.com/photo-1504701954957-2010ec3bcec1?w=400&h=250&fit=crop', afterPhoto: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=250&fit=crop',
-  },
+  { id: 'kh1', title: 'Аварійний стан будівлі', description: 'Стара будівля загрожує обваленням', category: 'critical', status: 'processing', priority: 'critical', location: 'вул. Проскурівська, 58', lat: 49.42497, lng: 26.99873, complaintsCount: 25, timeAgo: '10 хв тому', department: 'ДСНС' },
+  { id: 'kh2', title: 'Відсутність опалення у будинку', description: 'Мешканці будинку без тепла вже 3 дні', category: 'utility', status: 'processing', priority: 'critical', location: 'мкр Озерний, буд. 21', lat: 49.41214, lng: 26.98356, complaintsCount: 40, timeAgo: '2 год тому', department: 'Теплокомуненерго' },
+  { id: 'kh3', title: 'Вирубка дерев у сквері', description: 'Несанкціонована вирубка дерев у міському сквері', category: 'ecology', status: 'new', priority: 'high', location: 'Сквер Перемоги', lat: 49.43012, lng: 27.00415, complaintsCount: 30, timeAgo: '1 год тому', department: 'Екологічна служба' },
+  { id: 'kh4', title: 'Погана розмітка на дорозі', description: 'Дорожня розмітка стерлась, небезпечно для водіїв', category: 'transport', status: 'new', priority: 'medium', location: 'вул. Шевченка, 12', lat: 49.41893, lng: 26.98991, complaintsCount: 8, timeAgo: '4 год тому', department: 'Служба дорожнього руху' },
+  { id: 'kh5', title: 'Зруйновані лавки в парку', description: 'Вандали пошкодили лавки у парку Перемоги', category: 'infrastructure', status: 'new', priority: 'low', location: 'Парк Перемоги, алея 2', lat: 49.43241, lng: 27.00892, complaintsCount: 5, timeAgo: '6 год тому', department: 'ЖКГ' },
+  { id: 'kh6', title: 'Ліквідовано аварію водопроводу ✅', description: 'Аварія на водопроводі успішно ліквідована', category: 'utility', status: 'resolved', priority: 'low', location: 'вул. Заводська, 9', lat: 49.40782, lng: 26.97215, complaintsCount: 12, timeAgo: '8 год тому', department: 'Хмельниціводоканал', beforePhoto: 'https://images.unsplash.com/photo-1504701954957-2010ec3bcec1?w=400&h=250&fit=crop', afterPhoto: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=250&fit=crop' },
+  { id: 'kh7', title: 'Провалля дороги після дощів', description: 'Утворилась глибока яма після сильних дощів', category: 'transport', status: 'processing', priority: 'critical', location: 'вул. Кам\'янецька, 33', lat: 49.41562, lng: 27.00634, complaintsCount: 17, timeAgo: '30 хв тому', department: 'Служба доріг' },
+  { id: 'kh8', title: 'Забруднення струмка Плоскенька', description: 'Виявлено скид стічних вод у струмок', category: 'ecology', status: 'processing', priority: 'high', location: 'р. Плоскенька, парковий міст', lat: 49.43587, lng: 26.98782, complaintsCount: 10, timeAgo: '50 хв тому', department: 'Екологічна служба' },
+  { id: 'kh9', title: 'Не вивозиться сміття у мікрорайоні', description: 'Контейнери переповнені понад тиждень', category: 'ecology', status: 'new', priority: 'medium', location: 'вул. Свободи, 102', lat: 49.42891, lng: 26.98214, complaintsCount: 9, timeAgo: '1 год тому', department: 'КП Спецкомунтранс' },
+  { id: 'kh10', title: 'Розбите скло на дитячому майданчику', description: 'Виявлено розбите скло, небезпечно для дітей', category: 'infrastructure', status: 'new', priority: 'high', location: 'вул. Зарічанська, 18', lat: 49.42153, lng: 27.01298, complaintsCount: 6, timeAgo: '15 хв тому', department: 'ЖКГ' },
+  { id: 'kh11', title: 'Не працює світлофор на розв\'язці', description: 'Світлофор вимкнено, ускладнений рух транспорту', category: 'transport', status: 'processing', priority: 'high', location: 'вул. Соборна / Театральна', lat: 49.42035, lng: 26.98657, complaintsCount: 11, timeAgo: '22 хв тому', department: 'Служба дорожнього руху' },
 ];
 
 // ─── КИЇВ ──────────────────────────────────────────────────────────────
 const KYIV_INCIDENTS: Incident[] = [
-  {
-    id: 'k1', title: 'Знеструмлення цілого кварталу', description: 'Підстанція вийшла з ладу, знеструмлено 500 квартир', category: 'critical', status: 'processing', priority: 'critical', location: 'Оболонь', lat: 50.5000, lng: 30.4980, complaintsCount: 500, timeAgo: '20 хв тому', department: 'ДТЕК',
-  },
-  {
-    id: 'k2', title: 'Зсув ґрунту на схилі', description: 'Зсув ґрунту загрожує будинкам на схилі', category: 'critical', status: 'processing', priority: 'critical', location: 'Подільський р-н', lat: 50.4650, lng: 30.5150, complaintsCount: 80, timeAgo: '1 год тому', department: 'ДСНС',
-  },
-  {
-    id: 'k3', title: 'Прорив теплотраси', description: 'Гаряча вода затопила вулицю та підвали', category: 'utility', status: 'processing', priority: 'critical', location: 'Печерськ', lat: 50.4380, lng: 30.5280, complaintsCount: 45, timeAgo: '35 хв тому', department: 'Київтеплоенерго',
-  },
-  {
-    id: 'k4', title: 'Незаконне паркування на тротуарі', description: 'Авто заблокували прохід для пішоходів', category: 'transport', status: 'new', priority: 'medium', location: 'вул. Хрещатик', lat: 50.4480, lng: 30.5240, complaintsCount: 15, timeAgo: '2 год тому', department: 'Муніципальна варта',
-  },
-  {
-    id: 'k5', title: 'Пошкоджено фонтан у парку', description: 'Фонтан не працює, води вилилась на доріжки', category: 'infrastructure', status: 'new', priority: 'low', location: 'Гідропарк', lat: 50.4390, lng: 30.5950, complaintsCount: 7, timeAgo: '3 год тому', department: 'КП Київзеленбуд',
-  },
-  {
-    id: 'k6', title: 'Дим з підземного колектора', description: 'З каналізаційного колектора йде дим', category: 'ecology', status: 'processing', priority: 'high', location: 'вул. Саксаганського', lat: 50.4320, lng: 30.5030, complaintsCount: 22, timeAgo: '50 хв тому', department: 'Екологічна служба',
-  },
-  {
-    id: 'k7', title: 'Аварія на Бориспільській трасі', description: 'ДТП заблокувало рух, затор на 5 км', category: 'transport', status: 'processing', priority: 'high', location: 'Бориспільська траса', lat: 50.4200, lng: 30.6200, complaintsCount: 200, timeAgo: '15 хв тому', department: 'Патрульна поліція',
-  },
-  {
-    id: 'k8', title: 'Ліквідовано прорив каналізації ✅', description: 'Аварія успішно ліквідована бригадою', category: 'utility', status: 'resolved', priority: 'low', location: 'Голосіїв', lat: 50.4050, lng: 30.5130, complaintsCount: 18, timeAgo: '6 год тому', department: 'Київводоканал', beforePhoto: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=250&fit=crop', afterPhoto: 'https://images.unsplash.com/photo-1504701954957-2010ec3bcec1?w=400&h=250&fit=crop',
-  },
-  {
-    id: 'k9', title: 'Відновлено освітлення Майдану ✅', description: 'Всі ліхтарі відновлено після планового ремонту', category: 'infrastructure', status: 'resolved', priority: 'low', location: 'Майдан Незалежності', lat: 50.4501, lng: 30.5234, complaintsCount: 5, timeAgo: '12 год тому', department: 'КП Міськсвітло', beforePhoto: 'https://images.unsplash.com/photo-1504701954957-2010ec3bcec1?w=400&h=250&fit=crop', afterPhoto: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=250&fit=crop',
-  },
+  { id: 'k1', title: 'Знеструмлення цілого кварталу', description: 'Підстанція вийшла з ладу, знеструмлено сотні квартир', category: 'critical', status: 'processing', priority: 'critical', location: 'просп. Оболонський, 45', lat: 50.50124, lng: 30.49812, complaintsCount: 500, timeAgo: '20 хв тому', department: 'ДТЕК' },
+  { id: 'k2', title: 'Зсув ґрунту на схилі', description: 'Зсув ґрунту загрожує будинкам на схилі', category: 'critical', status: 'processing', priority: 'critical', location: 'Андріївський узвіз, 15', lat: 50.46102, lng: 30.51843, complaintsCount: 80, timeAgo: '1 год тому', department: 'ДСНС' },
+  { id: 'k3', title: 'Прорив теплотраси', description: 'Гаряча вода затопила вулицю та підвали', category: 'utility', status: 'processing', priority: 'critical', location: 'вул. Інститутська, 8', lat: 50.44531, lng: 30.52901, complaintsCount: 45, timeAgo: '35 хв тому', department: 'Київтеплоенерго' },
+  { id: 'k4', title: 'Незаконне паркування на тротуарі', description: 'Авто заблокували прохід для пішоходів', category: 'transport', status: 'new', priority: 'medium', location: 'вул. Хрещатик, 22', lat: 50.44802, lng: 30.52389, complaintsCount: 15, timeAgo: '2 год тому', department: 'Муніципальна варта' },
+  { id: 'k5', title: 'Пошкоджено фонтан у парку', description: 'Фонтан не працює, вода вилилась на доріжки', category: 'infrastructure', status: 'new', priority: 'low', location: 'Гідропарк, алея 4', lat: 50.44891, lng: 30.57402, complaintsCount: 7, timeAgo: '3 год тому', department: 'КП Київзеленбуд' },
+  { id: 'k6', title: 'Дим з підземного колектора', description: 'З каналізаційного колектора йде дим', category: 'ecology', status: 'processing', priority: 'high', location: 'вул. Саксаганського, 61', lat: 50.43792, lng: 30.51287, complaintsCount: 22, timeAgo: '50 хв тому', department: 'Екологічна служба' },
+  { id: 'k7', title: 'Аварія на Бориспільській трасі', description: 'ДТП заблокувало рух, затор на кілька кілометрів', category: 'transport', status: 'processing', priority: 'high', location: 'Бориспільське шосе, 24 км', lat: 50.39812, lng: 30.63541, complaintsCount: 200, timeAgo: '15 хв тому', department: 'Патрульна поліція' },
+  { id: 'k8', title: 'Ліквідовано прорив каналізації ✅', description: 'Аварія успішно ліквідована бригадою', category: 'utility', status: 'resolved', priority: 'low', location: 'вул. Голосіївська, 7', lat: 50.39876, lng: 30.51982, complaintsCount: 18, timeAgo: '6 год тому', department: 'Київводоканал', beforePhoto: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=250&fit=crop', afterPhoto: 'https://images.unsplash.com/photo-1504701954957-2010ec3bcec1?w=400&h=250&fit=crop' },
+  { id: 'k9', title: 'Відновлено освітлення Майдану ✅', description: 'Всі ліхтарі відновлено після планового ремонту', category: 'infrastructure', status: 'resolved', priority: 'low', location: 'Майдан Незалежності', lat: 50.45012, lng: 30.52398, complaintsCount: 5, timeAgo: '12 год тому', department: 'КП Міськсвітло', beforePhoto: 'https://images.unsplash.com/photo-1504701954957-2010ec3bcec1?w=400&h=250&fit=crop', afterPhoto: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=250&fit=crop' },
+  { id: 'k10', title: 'Провалля дорожнього покриття', description: 'Утворилась глибока яма на проспекті', category: 'transport', status: 'new', priority: 'critical', location: 'просп. Перемоги, 67', lat: 50.45689, lng: 30.44521, complaintsCount: 28, timeAgo: '10 хв тому', department: 'Служба доріг' },
+  { id: 'k11', title: 'Забруднення Дніпра поблизу мосту', description: 'Плівка на воді, підозра на розлив нафтопродуктів', category: 'ecology', status: 'processing', priority: 'critical', location: 'Наб. Дніпровська, Рибальський міст', lat: 50.47123, lng: 30.53421, complaintsCount: 34, timeAgo: '40 хв тому', department: 'Екологічна служба' },
+  { id: 'k12', title: 'Не працює ескалатор у переході', description: 'Ескалатор в підземному переході не функціонує', category: 'infrastructure', status: 'new', priority: 'medium', location: 'вул. Богдана Хмельницького, 4', lat: 50.44562, lng: 30.51823, complaintsCount: 9, timeAgo: '1 год тому', department: 'КП Київпастранс' },
 ];
 
 export const CITY_INCIDENTS: Record<string, Incident[]> = {

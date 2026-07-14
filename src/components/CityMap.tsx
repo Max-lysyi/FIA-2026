@@ -24,7 +24,11 @@ const ZOOM_SINGLE_CLUSTER = 11; // below this: one blue dot for everything
 const ZOOM_INDIVIDUAL     = 15; // at or above this: individual dots
 
 function getRadius(zoom: number): number {
-  if (zoom >= 15) return 0.0004;
+  // Keep halving past zoom 15 instead of flattening out, so incidents that
+  // are close together (but not identical) still separate into individual
+  // markers once the user zooms in far enough.
+  if (zoom > 15) return 0.0004 / Math.pow(2, zoom - 15);
+  if (zoom === 15) return 0.0004;
   if (zoom >= 14) return 0.003;
   if (zoom >= 13) return 0.006;
   if (zoom >= 12) return 0.012;
