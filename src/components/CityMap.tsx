@@ -172,36 +172,26 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
       const centerLng = cluster.reduce((s, i) => s + i.lng, 0) / cluster.length;
 
       if (cluster.length === 1) {
-        // ── Individual marker ──
+        // ── Individual marker — a plain dot, no number, so it never reads
+        // as a cluster bubble. The complaint count lives in the info card
+        // that opens on click instead. ──
         const inc = cluster[0];
         const cfg = CATEGORY_CONFIG[inc.category];
         const isResolved = inc.status === 'resolved';
         const isCritical = inc.priority === 'critical';
-        const baseSize = isResolved ? 18 : isCritical ? 26 : 22;
-
-        const showCount = total > 1;
+        const baseSize = isResolved ? 16 : isCritical ? 22 : 18;
 
         const icon = L.divIcon({
           html: `
             <div style="
-              position: relative;
               width:${baseSize}px; height:${baseSize}px;
               background: ${cfg.markerColor};
-              border: 2px solid rgba(255,255,255,0.8);
+              border: 2px solid rgba(255,255,255,0.9);
               border-radius: 50%;
               box-shadow: 0 0 ${baseSize}px ${cfg.markerColor}80;
-              display: flex; align-items: center; justify-content: center;
               cursor: pointer;
               ${isCritical ? 'animation: m-pulse 1.4s ease-in-out infinite;' : ''}
-            ">
-              ${showCount ? `<span style="
-                font-size:${baseSize <= 20 ? 8 : 10}px;
-                font-weight:800;
-                color:white;
-                text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-                line-height:1;
-              ">${total}</span>` : ''}
-            </div>
+            "></div>
             <style>
               @keyframes m-pulse {
                 0%,100% { transform:scale(1); box-shadow:0 0 ${baseSize}px ${cfg.markerColor}80; }
@@ -271,31 +261,82 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
     }
   }, [selectedIncident]);
 
-  // Determine if Before/After is shown (whenever a resolved incident is active)
-  const isResolvedSelected = selectedIncident?.status === 'resolved';
+  const hasBeforeAfter = selectedIncident?.status === 'resolved' && selectedIncident?.beforePhoto && selectedIncident?.afterPhoto;
+  const singlePhoto = !hasBeforeAfter ? (selectedIncident?.beforePhoto || selectedIncident?.afterPhoto) : null;
+
+  const PRIORITY_LABELS: Record<string, string> = { low: 'Низький', medium: 'Середній', high: 'Високий', critical: 'Критичний' };
+  const PRIORITY_COLORS: Record<string, string> = { low: '#10B981', medium: '#F59E0B', high: '#F97316', critical: '#EF4444' };
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
 
-      {/* Before/After slider — shown when resolved incident selected */}
-      {isResolvedSelected && selectedIncident?.beforePhoto && selectedIncident?.afterPhoto && (
+      {/* Incident info card — shown for any selected marker */}
+      {selectedIncident && (
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-start', zIndex: 50, padding: 24, pointerEvents: 'none' }}>
-          <div className="glass-card" style={{ padding: 16, width: 320, pointerEvents: 'auto', background: 'var(--bg-card)', borderRadius: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <div>
-                <h4 style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)' }}>{selectedIncident.title}</h4>
-                <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{selectedIncident.location}</p>
+          <div className="glass-card" style={{ padding: 16, width: 340, maxHeight: '70%', overflowY: 'auto', pointerEvents: 'auto', background: 'var(--bg-card)', borderRadius: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10, gap: 8 }}>
+              <div style={{ minWidth: 0 }}>
+                <h4 style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>{selectedIncident.title}</h4>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>📍 {selectedIncident.location}</p>
               </div>
               <button
                 onClick={() => onSelectIncident(null)}
-                style={{ width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, background: 'var(--bg-glass)', color: 'var(--text-secondary)', border: 'none', cursor: 'pointer' }}
+                style={{ width: 28, height: 28, flexShrink: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, background: 'var(--bg-glass)', color: 'var(--text-secondary)', border: 'none', cursor: 'pointer' }}
               >
                 ✕
               </button>
             </div>
-            <BeforeAfterSlider beforeSrc={selectedIncident.beforePhoto} afterSrc={selectedIncident.afterPhoto} />
-            <p style={{ fontSize: 11, marginTop: 8, textAlign: 'center', color: 'var(--text-muted)' }}>← Перетягніть →</p>
+
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+              <span
+                className="badge"
+                style={{
+                  background: CATEGORY_CONFIG[selectedIncident.category].bgColor,
+                  color: CATEGORY_CONFIG[selectedIncident.category].color,
+                  border: `1px solid ${CATEGORY_CONFIG[selectedIncident.category].borderColor}`,
+                  fontSize: 11, padding: '3px 8px', borderRadius: 20,
+                }}
+              >
+                {CATEGORY_CONFIG[selectedIncident.category].label}
+              </span>
+              <span
+                className="badge"
+                style={{
+                  background: `${PRIORITY_COLORS[selectedIncident.priority]}20`,
+                  color: PRIORITY_COLORS[selectedIncident.priority],
+                  border: `1px solid ${PRIORITY_COLORS[selectedIncident.priority]}40`,
+                  fontSize: 11, padding: '3px 8px', borderRadius: 20,
+                }}
+              >
+                {PRIORITY_LABELS[selectedIncident.priority]}
+              </span>
+            </div>
+
+            <p style={{ fontSize: 12.5, lineHeight: 1.5, color: 'var(--text-secondary)', marginBottom: 10 }}>
+              {selectedIncident.description}
+            </p>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)', marginBottom: hasBeforeAfter || singlePhoto ? 10 : 0 }}>
+              <span>👥 {selectedIncident.complaintsCount} скарг</span>
+              <span>🏢 {selectedIncident.department}</span>
+              <span>🕐 {selectedIncident.timeAgo}</span>
+            </div>
+
+            {hasBeforeAfter && (
+              <>
+                <BeforeAfterSlider beforeSrc={selectedIncident.beforePhoto!} afterSrc={selectedIncident.afterPhoto!} />
+                <p style={{ fontSize: 11, marginTop: 8, textAlign: 'center', color: 'var(--text-muted)' }}>← Перетягніть →</p>
+              </>
+            )}
+
+            {singlePhoto && (
+              <img
+                src={singlePhoto}
+                alt={selectedIncident.title}
+                style={{ width: '100%', height: 140, objectFit: 'cover', borderRadius: 10 }}
+              />
+            )}
           </div>
         </div>
       )}
