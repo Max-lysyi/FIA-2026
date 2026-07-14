@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { CATEGORY_CONFIG, type IncidentCategory } from '../data/incidents';
+import { classifyIncident } from '../lib/ai';
 
 interface ReportSheetProps {
   isOpen: boolean;
@@ -15,55 +16,14 @@ export interface ReportData {
   location: string;
 }
 
-type AIStep = 'idle' | 'typing' | 'analyzing' | 'done';
-
-const AI_CATEGORIES: Record<string, IncidentCategory> = {
-  сміт: 'ecology',
-  буг: 'ecology',
-  річк: 'ecology',
-  хімі: 'ecology',
-  дерев: 'critical',
-  аварі: 'critical',
-  вибух: 'critical',
-  пожеж: 'critical',
-  дорог: 'transport',
-  світлофор: 'transport',
-  маршрутк: 'transport',
-  затор: 'transport',
-  трубa: 'utility',
-  вод: 'utility',
-  газ: 'utility',
-  електр: 'utility',
-  тротуар: 'infrastructure',
-  яма: 'infrastructure',
-  бруд: 'infrastructure',
-  паркинг: 'infrastructure',
-};
-
-function classifyText(text: string): { category: IncidentCategory; priority: 'low' | 'medium' | 'high' | 'critical' } {
-  const lower = text.toLowerCase();
-  let category: IncidentCategory = 'infrastructure';
-  for (const [key, cat] of Object.entries(AI_CATEGORIES)) {
-    if (lower.includes(key)) {
-      category = cat;
-      break;
-    }
-  }
-  const priority = lower.includes('критич') || lower.includes('аварі') || lower.includes('пожеж')
-    ? 'critical'
-    : lower.includes('терміново') || lower.includes('сильно')
-    ? 'high'
-    : lower.includes('трохи') ? 'low'
-    : 'medium';
-
-  return { category, priority };
-}
+type AIStep = 'idle' | 'typing' | 'analyzing' | 'done' | 'error';
 
 const ReportSheet: React.FC<ReportSheetProps> = ({ isOpen, onClose, onSubmit }) => {
   const [text, setText] = useState('');
   const [aiStep, setAiStep] = useState<AIStep>('idle');
   const [result, setResult] = useState<ReportData | null>(null);
   const [isInputActive, setIsInputActive] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -73,34 +33,32 @@ const ReportSheet: React.FC<ReportSheetProps> = ({ isOpen, onClose, onSubmit }) 
       setText('');
       setAiStep('idle');
       setResult(null);
+      setError(null);
     }
   }, [isOpen]);
 
   const handleSubmit = async () => {
     if (!text.trim()) return;
     setAiStep('analyzing');
+    setError(null);
 
-    await new Promise(r => setTimeout(r, 2200));
+    try {
+      const { category, priority, department, improvedText } = await classifyIncident(text);
 
-    const { category, priority } = classifyText(text);
-    const department = CATEGORY_CONFIG[category].label === 'ЕКОЛОГІЯ'
-      ? 'Екологічна служба'
-      : category === 'utility'
-      ? 'Вінницяводоканал'
-      : category === 'transport'
-      ? 'Служба дорожнього руху'
-      : 'ЖКГ';
+      const reportData: ReportData = {
+        text: improvedText,
+        category,
+        priority,
+        department,
+        location: 'Вінниця (автовизначення)',
+      };
 
-    const reportData: ReportData = {
-      text,
-      category,
-      priority,
-      department,
-      location: 'Вінниця (автовизначення)',
-    };
-
-    setResult(reportData);
-    setAiStep('done');
+      setResult(reportData);
+      setAiStep('done');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не вдалося отримати відповідь ШІ');
+      setAiStep('error');
+    }
   };
 
   const handleFinalSubmit = () => {
@@ -214,6 +172,20 @@ const ReportSheet: React.FC<ReportSheetProps> = ({ isOpen, onClose, onSubmit }) 
                 </span>
               ))}
             </div>
+          </div>
+        )}
+
+        {aiStep === 'error' && (
+          <div className="flex flex-col items-center gap-4 py-6">
+            <div
+              className="w-full p-4 rounded-xl text-sm"
+              style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#EF4444' }}
+            >
+              ⚠️ Помилка ШІ-аналізу: {error}
+            </div>
+            <button onClick={handleSubmit} className="btn-neon w-full py-3 text-sm font-bold">
+              🔄 Спробувати ще раз
+            </button>
           </div>
         )}
 

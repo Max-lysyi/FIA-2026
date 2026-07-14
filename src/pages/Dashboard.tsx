@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar, { type SidebarView } from '../components/Sidebar';
 import MetricsBar from '../components/MetricsBar';
 import IncidentFeed from '../components/IncidentFeed';
@@ -14,6 +14,18 @@ import { IconGlobe, IconPin, IconSearch, IconMap, IconAnalytics, IconUser, IconD
 
 type MobileActiveView = SidebarView | 'feed';
 
+const USER_INCIDENTS_KEY = 'citysense_user_incidents';
+const JOINED_VOTES_KEY = 'citysense_joined_votes';
+
+function loadJson<T>(key: string, fallback: T): T {
+  try {
+    const saved = localStorage.getItem(key);
+    return saved ? JSON.parse(saved) as T : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 const Dashboard: React.FC = () => {
   const [activeView, setActiveView] = useState<SidebarView>('map');
   const [isFeedOpen, setIsFeedOpen] = useState(true);
@@ -21,7 +33,35 @@ const Dashboard: React.FC = () => {
   const [isCityModalOpen, setIsCityModalOpen] = useState(false);
   const [currentCity, setCurrentCity] = useState<City>(CITIES[0]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [allCityIncidents, setAllCityIncidents] = useState<Record<string, Incident[]>>(CITY_INCIDENTS);
+
+  // Incidents a user submitted through the report form, kept separately from
+  // the static seed data so they survive a page refresh (persisted below).
+  const [userIncidents, setUserIncidents] = useState<Record<string, Incident[]>>(() =>
+    loadJson(USER_INCIDENTS_KEY, {} as Record<string, Incident[]>)
+  );
+  // Extra "join this incident" votes, keyed by incident id, also persisted.
+  const [joinedVotes, setJoinedVotes] = useState<Record<string, number>>(() =>
+    loadJson(JOINED_VOTES_KEY, {} as Record<string, number>)
+  );
+
+  useEffect(() => {
+    localStorage.setItem(USER_INCIDENTS_KEY, JSON.stringify(userIncidents));
+  }, [userIncidents]);
+
+  useEffect(() => {
+    localStorage.setItem(JOINED_VOTES_KEY, JSON.stringify(joinedVotes));
+  }, [joinedVotes]);
+
+  const allCityIncidents: Record<string, Incident[]> = React.useMemo(() => {
+    const merged: Record<string, Incident[]> = {};
+    for (const cityId of Object.keys(CITY_INCIDENTS)) {
+      const withVotes = CITY_INCIDENTS[cityId].map(inc =>
+        joinedVotes[inc.id] ? { ...inc, complaintsCount: inc.complaintsCount + joinedVotes[inc.id] } : inc
+      );
+      merged[cityId] = [...(userIncidents[cityId] ?? []), ...withVotes];
+    }
+    return merged;
+  }, [userIncidents, joinedVotes]);
 
   // Mobile specific view switcher state
   const [mobileView, setMobileView] = useState<MobileActiveView>('map');
@@ -41,10 +81,14 @@ const Dashboard: React.FC = () => {
   };
 
   const handleAddIncident = (newInc: Incident) => {
-    setAllCityIncidents(prev => ({
+    setUserIncidents(prev => ({
       ...prev,
       [currentCity.id]: [newInc, ...(prev[currentCity.id] ?? [])],
     }));
+  };
+
+  const handleJoinIncident = (incidentId: string) => {
+    setJoinedVotes(prev => ({ ...prev, [incidentId]: (prev[incidentId] ?? 0) + 1 }));
   };
 
   const handleMobileNavClick = (view: MobileActiveView) => {
@@ -229,7 +273,9 @@ const Dashboard: React.FC = () => {
           <div className="cs-page">
             <ReportView
               currentCity={currentCity}
+              cityIncidents={rawIncidents}
               onAddIncident={handleAddIncident}
+              onJoinIncident={handleJoinIncident}
               onNavigateToMap={() => {
                 setActiveView('map');
                 setMobileView('map');
