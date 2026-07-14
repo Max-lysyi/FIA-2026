@@ -51,11 +51,17 @@ const Dashboard: React.FC = () => {
 
   // Mobile specific view switcher state
   const [mobileView, setMobileView] = useState<MobileActiveView>('map');
-  const incidents = rawIncidents.filter(inc =>
-    inc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    inc.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    inc.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Memoized so CityMap's marker-drawing effect (keyed on this array's
+  // identity) doesn't re-run and redraw every marker on every unrelated
+  // re-render — e.g. right after a marker click sets selectedIncident.
+  const incidents = useMemo(() => {
+    const q = searchQuery.toLowerCase();
+    return rawIncidents.filter(inc =>
+      inc.title.toLowerCase().includes(q) ||
+      inc.location.toLowerCase().includes(q) ||
+      inc.description.toLowerCase().includes(q)
+    );
+  }, [rawIncidents, searchQuery]);
 
   const handleCitySelect = (city: City) => {
     setCurrentCity(city);
