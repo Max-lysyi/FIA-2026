@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { CATEGORY_CONFIG, type Incident, type City } from '../data/incidents';
-import BeforeAfterSlider from './BeforeAfterSlider';
 import { useTheme } from '../context/ThemeContext';
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -63,6 +62,72 @@ function hexToRgb(hex: string): string {
   return `${r},${g},${b}`;
 }
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+const PRIORITY_LABELS: Record<string, string> = { low: 'Низький', medium: 'Середній', high: 'Високий', critical: 'Критичний' };
+const PRIORITY_COLORS: Record<string, string> = { low: '#10B981', medium: '#F59E0B', high: '#F97316', critical: '#EF4444' };
+
+// ── Hover tooltip — compact preview ─────────────────────────────────────
+function buildTooltipHtml(inc: Incident): string {
+  const cfg = CATEGORY_CONFIG[inc.category];
+  return `
+    <div class="cs-map-tip">
+      <div class="cs-map-tip__title">${escapeHtml(inc.title)}</div>
+      <div class="cs-map-tip__row">
+        <span class="cs-map-tip__badge" style="background:${cfg.bgColor};color:${cfg.color};border-color:${cfg.borderColor}">${cfg.label}</span>
+        <span class="cs-map-tip__badge" style="background:${PRIORITY_COLORS[inc.priority]}22;color:${PRIORITY_COLORS[inc.priority]};border-color:${PRIORITY_COLORS[inc.priority]}55">${PRIORITY_LABELS[inc.priority]}</span>
+      </div>
+      <div class="cs-map-tip__meta">👥 ${inc.complaintsCount} скарг · 📍 ${escapeHtml(inc.location)}</div>
+    </div>`;
+}
+
+// ── Click popup — full detail card ──────────────────────────────────────
+function buildPopupHtml(inc: Incident): string {
+  const cfg = CATEGORY_CONFIG[inc.category];
+  const hasBeforeAfter = inc.status === 'resolved' && inc.beforePhoto && inc.afterPhoto;
+  const singlePhoto = !hasBeforeAfter ? (inc.beforePhoto || inc.afterPhoto) : null;
+
+  let photosHtml = '';
+  if (hasBeforeAfter) {
+    photosHtml = `
+      <div class="cs-map-popup__photos">
+        <div class="cs-map-popup__photo-col">
+          <img src="${inc.beforePhoto}" alt="До" />
+          <span>До</span>
+        </div>
+        <div class="cs-map-popup__photo-col">
+          <img src="${inc.afterPhoto}" alt="Після" />
+          <span>Після</span>
+        </div>
+      </div>`;
+  } else if (singlePhoto) {
+    photosHtml = `<img class="cs-map-popup__photo" src="${singlePhoto}" alt="${escapeHtml(inc.title)}" />`;
+  }
+
+  return `
+    <div class="cs-map-popup">
+      <div class="cs-map-popup__title">${escapeHtml(inc.title)}</div>
+      <div class="cs-map-popup__location">📍 ${escapeHtml(inc.location)}</div>
+      <div class="cs-map-popup__badges">
+        <span class="cs-map-popup__badge" style="background:${cfg.bgColor};color:${cfg.color};border-color:${cfg.borderColor}">${cfg.label}</span>
+        <span class="cs-map-popup__badge" style="background:${PRIORITY_COLORS[inc.priority]}22;color:${PRIORITY_COLORS[inc.priority]};border-color:${PRIORITY_COLORS[inc.priority]}55">${PRIORITY_LABELS[inc.priority]}</span>
+      </div>
+      <p class="cs-map-popup__desc">${escapeHtml(inc.description)}</p>
+      <div class="cs-map-popup__meta">
+        <span>👥 ${inc.complaintsCount} скарг</span>
+        <span>🏢 ${escapeHtml(inc.department)}</span>
+        <span>🕐 ${escapeHtml(inc.timeAgo)}</span>
+      </div>
+      ${photosHtml}
+    </div>`;
+}
+
 // ── Component ─────────────────────────────────────────────────────────────
 interface CityMapProps {
   selectedIncident: Incident | null;
@@ -77,6 +142,7 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
   const tileRef       = useRef<L.TileLayer | null>(null);
   const markersGroup  = useRef<L.LayerGroup | null>(null);
   const heatGroup     = useRef<L.LayerGroup | null>(null);
+  const markersById   = useRef<Map<string, L.Marker>>(new Map());
   const { isDark }    = useTheme();
   const [zoom, setZoom]               = useState(city.zoom);
 
@@ -132,6 +198,7 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
     const map = mapRef.current;
     if (!mg || !map) return;
     mg.clearLayers();
+    markersById.current.clear();
 
     const currentZoom = map.getZoom();
 
@@ -177,8 +244,8 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
 
       if (cluster.length === 1) {
         // ── Individual marker — a plain dot, no number, so it never reads
-        // as a cluster bubble. The complaint count lives in the info card
-        // that opens on click instead. ──
+        // as a cluster bubble. Hover shows a quick preview tooltip, click
+        // opens a full detail popup anchored to the marker. ──
         const inc = cluster[0];
         const cfg = CATEGORY_CONFIG[inc.category];
         const isResolved = inc.status === 'resolved';
@@ -207,10 +274,22 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
           iconAnchor: [baseSize / 2, baseSize / 2],
         });
 
-        const m = L.marker([inc.lat, inc.lng], { icon }).addTo(mg);
-        m.on('click', () => {
-          onSelectIncident(inc);
-        });
+        const m = L.marker([inc.lat, inc.lng], { icon })
+          .bindTooltip(buildTooltipHtml(inc), {
+            direction: 'top',
+            offset: [0, -baseSize / 2],
+            opacity: 1,
+            className: 'cs-map-tip-wrapper',
+          })
+          .bindPopup(buildPopupHtml(inc), {
+            className: 'cs-map-popup-wrapper',
+            maxWidth: 300,
+            offset: [0, -baseSize / 2],
+          })
+          .addTo(mg);
+
+        m.on('click', () => onSelectIncident(inc));
+        markersById.current.set(inc.id, m);
 
       } else {
         // ── Cluster bubble ──
@@ -246,11 +325,18 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
           iconAnchor: [size / 2, size / 2],
         });
 
-        const m = L.marker([centerLat, centerLng], { icon }).addTo(mg);
+        const clusterCount = cluster.length;
+        const m = L.marker([centerLat, centerLng], { icon })
+          .bindTooltip(`<div class="cs-map-tip"><div class="cs-map-tip__title">${clusterCount} інцидентів у цій зоні</div><div class="cs-map-tip__meta">Клікніть, щоб наблизити</div></div>`, {
+            direction: 'top',
+            offset: [0, -size / 2],
+            opacity: 1,
+            className: 'cs-map-tip-wrapper',
+          })
+          .addTo(mg);
         m.on('click', () => {
           const nextZoom = Math.min(map.getZoom() + 2, 18);
           map.flyTo([centerLat, centerLng], nextZoom, { duration: 0.7 });
-          onSelectIncident(cluster[0]);
         });
       }
     });
@@ -258,92 +344,24 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
 
   useEffect(() => { drawMarkers(); }, [zoom, drawMarkers]);
 
-  // Fly to selected
+  // When an incident is selected from outside the map (e.g. the sidebar
+  // feed), fly to it and — once individual markers exist at that zoom —
+  // open its popup, same as if the user had clicked it directly.
   useEffect(() => {
-    if (selectedIncident && mapRef.current) {
-      mapRef.current.flyTo([selectedIncident.lat, selectedIncident.lng], 16, { duration: 0.8 });
-    }
+    const map = mapRef.current;
+    if (!selectedIncident || !map) return;
+
+    map.flyTo([selectedIncident.lat, selectedIncident.lng], 16, { duration: 0.8 });
+
+    const timer = setTimeout(() => {
+      markersById.current.get(selectedIncident.id)?.openPopup();
+    }, 900);
+    return () => clearTimeout(timer);
   }, [selectedIncident]);
-
-  const hasBeforeAfter = selectedIncident?.status === 'resolved' && selectedIncident?.beforePhoto && selectedIncident?.afterPhoto;
-  const singlePhoto = !hasBeforeAfter ? (selectedIncident?.beforePhoto || selectedIncident?.afterPhoto) : null;
-
-  const PRIORITY_LABELS: Record<string, string> = { low: 'Низький', medium: 'Середній', high: 'Високий', critical: 'Критичний' };
-  const PRIORITY_COLORS: Record<string, string> = { low: '#10B981', medium: '#F59E0B', high: '#F97316', critical: '#EF4444' };
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
-
-      {/* Incident info card — shown for any selected marker */}
-      {selectedIncident && (
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-start', zIndex: 50, padding: 24, pointerEvents: 'none' }}>
-          <div className="glass-card" style={{ padding: 16, width: 340, maxHeight: '70%', overflowY: 'auto', pointerEvents: 'auto', background: 'var(--bg-card)', borderRadius: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10, gap: 8 }}>
-              <div style={{ minWidth: 0 }}>
-                <h4 style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>{selectedIncident.title}</h4>
-                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>📍 {selectedIncident.location}</p>
-              </div>
-              <button
-                onClick={() => onSelectIncident(null)}
-                style={{ width: 28, height: 28, flexShrink: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, background: 'var(--bg-glass)', color: 'var(--text-secondary)', border: 'none', cursor: 'pointer' }}
-              >
-                ✕
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
-              <span
-                className="badge"
-                style={{
-                  background: CATEGORY_CONFIG[selectedIncident.category].bgColor,
-                  color: CATEGORY_CONFIG[selectedIncident.category].color,
-                  border: `1px solid ${CATEGORY_CONFIG[selectedIncident.category].borderColor}`,
-                  fontSize: 11, padding: '3px 8px', borderRadius: 20,
-                }}
-              >
-                {CATEGORY_CONFIG[selectedIncident.category].label}
-              </span>
-              <span
-                className="badge"
-                style={{
-                  background: `${PRIORITY_COLORS[selectedIncident.priority]}20`,
-                  color: PRIORITY_COLORS[selectedIncident.priority],
-                  border: `1px solid ${PRIORITY_COLORS[selectedIncident.priority]}40`,
-                  fontSize: 11, padding: '3px 8px', borderRadius: 20,
-                }}
-              >
-                {PRIORITY_LABELS[selectedIncident.priority]}
-              </span>
-            </div>
-
-            <p style={{ fontSize: 12.5, lineHeight: 1.5, color: 'var(--text-secondary)', marginBottom: 10 }}>
-              {selectedIncident.description}
-            </p>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)', marginBottom: hasBeforeAfter || singlePhoto ? 10 : 0 }}>
-              <span>👥 {selectedIncident.complaintsCount} скарг</span>
-              <span>🏢 {selectedIncident.department}</span>
-              <span>🕐 {selectedIncident.timeAgo}</span>
-            </div>
-
-            {hasBeforeAfter && (
-              <>
-                <BeforeAfterSlider beforeSrc={selectedIncident.beforePhoto!} afterSrc={selectedIncident.afterPhoto!} />
-                <p style={{ fontSize: 11, marginTop: 8, textAlign: 'center', color: 'var(--text-muted)' }}>← Перетягніть →</p>
-              </>
-            )}
-
-            {singlePhoto && (
-              <img
-                src={singlePhoto}
-                alt={selectedIncident.title}
-                style={{ width: '100%', height: 140, objectFit: 'cover', borderRadius: 10 }}
-              />
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Legend */}
       <div
