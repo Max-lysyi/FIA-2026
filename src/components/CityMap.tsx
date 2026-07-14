@@ -108,11 +108,15 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
     mapRef.current?.flyTo([city.lat, city.lng], city.zoom, { duration: 1.2 });
   }, [city]);
 
-  // Heatmap circles
+  // Heatmap circles — a "hot zone" glow that only makes sense at city-wide
+  // zoom levels. Its radius is in real-world meters, so at high zoom (once
+  // individual markers are already visible) the same circle fills the whole
+  // screen and hides the actual points, so it's hidden past that zoom.
   useEffect(() => {
     const hg = heatGroup.current;
     if (!hg) return;
     hg.clearLayers();
+    if (zoom >= ZOOM_INDIVIDUAL) return;
     incidents.forEach(inc => {
       const cfg = CATEGORY_CONFIG[inc.category];
       const intensity = Math.min(inc.complaintsCount / 15, 1);
@@ -120,7 +124,7 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
       L.circle([inc.lat, inc.lng], { radius: r * 2.2, color: 'transparent', fillColor: cfg.markerColor, fillOpacity: 0.04 + intensity * 0.06, weight: 0 }).addTo(hg);
       L.circle([inc.lat, inc.lng], { radius: r,       color: 'transparent', fillColor: cfg.markerColor, fillOpacity: 0.10 + intensity * 0.16, weight: 0 }).addTo(hg);
     });
-  }, [incidents]);
+  }, [incidents, zoom]);
 
   // Markers — re-draw whenever zoom changes or incidents change
   const drawMarkers = useCallback(() => {
