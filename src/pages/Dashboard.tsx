@@ -12,6 +12,7 @@ import CSLogo from '../components/CSLogo';
 import { type Incident, type City, CITIES, CITY_INCIDENTS } from '../data/incidents';
 import { IconGlobe, IconPin, IconSearch, IconMap, IconAnalytics, IconUser, IconDashboard, IconSettings } from '../components/Icons';
 import { fetchCityIncidents, submitIncident, joinIncidentVote } from '../lib/incidents';
+import { getSmartCityData } from '../data/smartCityData';
 
 type MobileActiveView = SidebarView | 'feed';
 
@@ -48,6 +49,20 @@ const Dashboard: React.FC = () => {
     );
     return [...userIncidents, ...seedWithVotes];
   }, [userIncidents, votes, currentCity.id]);
+
+  const [isSmartPanelOpen, setIsSmartPanelOpen] = useState(true);
+
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTick(t => t + 1);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const { weather, aiRisks, stats } = useMemo(() => {
+    return getSmartCityData(currentCity.id, currentCity, rawIncidents, tick);
+  }, [currentCity, rawIncidents, tick]);
 
   // Mobile specific view switcher state
   const [mobileView, setMobileView] = useState<MobileActiveView>('map');
@@ -217,6 +232,214 @@ const Dashboard: React.FC = () => {
                   <strong style={{ fontSize: 13, color: m.color, marginTop: 4, display: 'block' }}>{m.value}</strong>
                 </div>
               ))}
+            </div>
+
+            {/* Desktop General State Panel */}
+            <div
+              className="cs-glass-card cs-desktop-only"
+              style={{
+                position: 'absolute',
+                top: 16,
+                left: 16,
+                zIndex: 1000,
+                padding: '12px 16px',
+                display: 'flex',
+                gap: 20,
+                alignItems: 'center',
+                background: 'var(--bg-card)',
+                backdropFilter: 'blur(16px)',
+                boxShadow: 'var(--shadow-card)',
+              }}
+            >
+              <div style={{ borderRight: '1px solid var(--border-color)', paddingRight: 16 }}>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Стан Міста</div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--accent)', marginTop: 2 }}>{currentCity.name}</div>
+              </div>
+              <div style={{ display: 'flex', gap: 20 }}>
+                {[
+                  { label: 'Датчики 📡', value: stats.activeSensors, color: 'var(--text-primary)' },
+                  { label: 'Зони ризику ⚠️', value: stats.dangerZonesCount, color: stats.dangerZonesCount > 0 ? '#F97316' : '#10B981' },
+                  { label: 'Нові скарги 📋', value: stats.newIncidentsCount, color: 'var(--text-primary)' },
+                  { label: 'Якість повітря 🍃', value: stats.avgAirQuality, color: stats.avgAirQuality.includes('155') ? '#EF4444' : '#10B981' },
+                  { label: 'Проблеми з водою 💧', value: stats.waterIssuesCount, color: stats.waterIssuesCount > 0 ? '#EF4444' : '#10B981' },
+                  { label: 'Найвищий ризик 🛑', value: stats.highestRiskDistricts, color: 'var(--text-secondary)', maxWidth: 120 },
+                ].map((stat, idx) => (
+                  <div key={idx} style={{ minWidth: 60 }}>
+                    <div style={{ fontSize: 9, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{stat.label}</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: stat.color, marginTop: 2, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: stat.maxWidth || 'none' }}>
+                      {stat.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Collapsible Smart City Panel (Weather + AI Analysis) */}
+            <div
+              className="cs-glass-card cs-desktop-only"
+              style={{
+                position: 'absolute',
+                top: 80,
+                left: isSmartPanelOpen ? 16 : -310,
+                bottom: 20,
+                width: 320,
+                zIndex: 1000,
+                transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                display: 'flex',
+                flexDirection: 'column',
+                background: 'var(--bg-card)',
+                backdropFilter: 'blur(16px)',
+                boxShadow: 'var(--shadow-card)',
+                overflow: 'hidden',
+              }}
+            >
+              {/* Toggle button */}
+              <button
+                onClick={() => setIsSmartPanelOpen(!isSmartPanelOpen)}
+                style={{
+                  position: 'absolute',
+                  right: -32,
+                  top: 16,
+                  width: 32,
+                  height: 48,
+                  background: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-color)',
+                  borderLeft: 'none',
+                  borderRadius: '0 10px 10px 0',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--text-primary)',
+                  boxShadow: '4px 4px 12px rgba(0,0,0,0.15)',
+                }}
+                title={isSmartPanelOpen ? "Сховати панель" : "Показати панель"}
+              >
+                {isSmartPanelOpen ? '◀' : '▶'}
+              </button>
+
+              {/* Panel content */}
+              <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', padding: 16, gap: 16 }}>
+                
+                {/* Section 1: Weather */}
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-color)', paddingBottom: 6, marginBottom: 10 }}>
+                    🌤️ Погода та Прогноз
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ fontSize: 28 }}>{weather.icon}</span>
+                    <div>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>{weather.temp}°C</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{weather.condition}</div>
+                    </div>
+                  </div>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, margin: '12px 0 8px', background: 'rgba(255,255,255,0.02)', padding: 8, borderRadius: 8, border: '1px solid var(--border-color)' }}>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: 9, color: 'var(--text-muted)' }}>Опади</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', marginTop: 2 }}>{weather.precipitation}</div>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: 9, color: 'var(--text-muted)' }}>Вітер</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', marginTop: 2 }}>{weather.windSpeed} км/г</div>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: 9, color: 'var(--text-muted)' }}>Вологість</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', marginTop: 2 }}>{weather.humidity}%</div>
+                    </div>
+                  </div>
+
+                  {/* 3-hour forecast */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 4, marginTop: 8 }}>
+                    {weather.forecast.slice(1, 5).map((f, i) => (
+                      <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, padding: 4, background: 'rgba(255,255,255,0.01)', borderRadius: 6 }}>
+                        <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>{f.time}</span>
+                        <span style={{ fontSize: 14, margin: '2px 0' }}>{f.icon}</span>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)' }}>{f.temp}°</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Section 2: AI Risk Analysis */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-color)', paddingBottom: 6, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ color: 'var(--accent)', animation: 'pulse 1.5s infinite' }}>🤖</span> ШІ-Аналіз Ризиків
+                  </div>
+
+                  <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, paddingRight: 4 }}>
+                    {aiRisks.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-muted)' }}>
+                        <div style={{ fontSize: 24, marginBottom: 6 }}>🟢</div>
+                        <div style={{ fontSize: 11 }}>Всі показники в межах норми. Ризиків не виявлено.</div>
+                      </div>
+                    ) : (
+                      aiRisks.map((risk) => {
+                        const riskColor = risk.level === 'danger' ? '#EF4444' : risk.level === 'high' ? '#F97316' : '#F59E0B';
+                        const riskBg = risk.level === 'danger' ? 'rgba(239, 68, 68, 0.05)' : risk.level === 'high' ? 'rgba(249, 115, 22, 0.05)' : 'rgba(245, 158, 11, 0.05)';
+                        return (
+                          <div
+                            key={risk.id}
+                            style={{
+                              background: riskBg,
+                              borderLeft: `3px solid ${riskColor}`,
+                              borderTop: '1px solid var(--border-color)',
+                              borderRight: '1px solid var(--border-color)',
+                              borderBottom: '1px solid var(--border-color)',
+                              borderRadius: '4px 8px 8px 4px',
+                              padding: 10,
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: 6,
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                              <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.3 }}>
+                                {risk.title}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: 8,
+                                  fontWeight: 800,
+                                  padding: '1px 4px',
+                                  borderRadius: 4,
+                                  background: `${riskColor}22`,
+                                  color: riskColor,
+                                  border: `1px solid ${riskColor}44`,
+                                  textTransform: 'uppercase',
+                                }}
+                              >
+                                {risk.level === 'danger' ? 'Критично' : risk.level === 'high' ? 'Високий' : 'Увага'}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: 10, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                              <strong>Причина:</strong> {risk.reasons}
+                            </div>
+                            <div style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                              <strong>Наслідки:</strong> {risk.consequences}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: 10,
+                                color: 'var(--accent)',
+                                background: 'var(--accent-dim)',
+                                border: '1px solid rgba(0,242,254,0.15)',
+                                borderRadius: 6,
+                                padding: '6px 8px',
+                                marginTop: 2,
+                                lineHeight: 1.4,
+                              }}
+                            >
+                              <strong>Рекомендація:</strong> {risk.recommendation}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+              </div>
             </div>
 
             <CityMap
