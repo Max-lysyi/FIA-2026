@@ -107,14 +107,27 @@ const Dashboard: React.FC = () => {
 
       {/* ═══ Mobile Top Header (from design reference) ═════════════════ */}
       <header className="cs-m-header cs-mobile-only">
+        <CSLogo size={30} />
         <div className="cs-m-header__logo" onClick={() => setIsCityModalOpen(true)} style={{ cursor: 'pointer' }}>
-          <CSLogo size={30} />
+          <div
+              style={{
+                width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'var(--accent-dim)', border: '1px solid rgba(0,242,254,0.3)',
+              }}
+            >
+              <IconGlobe size={18} color="var(--accent)" />
+            </div>
           <span className="cs-m-header__title">{currentCity.name}</span>
           <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>▼</span>
+          
         </div>
-        <div className="cs-m-header__profile" onClick={() => handleMobileNavClick('profile')} style={{ cursor: 'pointer' }}>
+        <div style={{display: 'flex'}}>
+          
+          <div className="cs-m-header__profile" onClick={() => handleMobileNavClick('profile')} style={{ cursor: 'pointer' }}>
           {CITIES[0].name.slice(0,2).toUpperCase()}
         </div>
+        </div>
+        
       </header>
 
       {/* ═══ Desktop Feed panel ════════════════════════════════════════ */}
@@ -188,9 +201,9 @@ const Dashboard: React.FC = () => {
             <div
               className="cs-mobile-only"
               style={{
-                position: 'absolute', top: 12, left: 12, right: 12, zIndex: 90,
-                display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8,
-                pointerEvents: 'none',
+                position: 'absolute', zIndex: 990, paddingTop:' 10px',
+                display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',alignItems: 'center', gap: 8,
+                pointerEvents: 'none', width: '100%', justifyContent: 'center'
               }}
             >
               {[
