@@ -213,6 +213,8 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
   const markersById   = useRef<Map<string, L.Marker>>(new Map());
   const { isDark }    = useTheme();
   const [zoom, setZoom]               = useState(city.zoom);
+  const [isLayersPanelOpen, setIsLayersPanelOpen] = useState(true);
+  const [isLegendOpen, setIsLegendOpen] = useState(true);
 
   const [activeLayers, setActiveLayers] = useState<Record<string, boolean>>({
     all: true,
@@ -584,82 +586,135 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
       <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
 
       {/* Layer Switcher */}
-      <div
-        className="cs-glass-card"
-        style={{
-          position: 'absolute',
-          top: 56,
-          right: 56,
-          padding: '12px 14px',
-          zIndex: 1000,
-          width: '180px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 6,
-          background: 'var(--bg-card)',
-          backdropFilter: 'blur(16px)',
-          boxShadow: 'var(--shadow-card)',
-        }}
-      >
-        <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 4, color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)', paddingBottom: 4 }}>
-          🗺️ Шари карти
-        </div>
-        {Object.entries(LAYER_LABELS).map(([layerKey, label]) => {
-          const isActive = activeLayers[layerKey];
-          return (
-            <label
-              key={layerKey}
+      {/* Layers Panel */}
+      {isLayersPanelOpen ? (
+        <div
+          className="cs-glass-card"
+          style={{
+            position: 'absolute',
+            top: 56,
+            right: 56,
+            padding: '12px 14px',
+            zIndex: 1000,
+            width: '180px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 6,
+            background: 'var(--bg-card)',
+            backdropFilter: 'blur(16px)',
+            boxShadow: 'var(--shadow-card)',
+          }}
+        >
+          <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 4, color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)', paddingBottom: 4, position: 'relative' }}>
+            🗺️ Шари карти
+            <button
+              onClick={() => setIsLayersPanelOpen(false)}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                fontSize: 11,
-                color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
-                cursor: 'pointer',
-                userSelect: 'none',
-                padding: '2px 0',
+                position: 'absolute', right: 0, top: -2,
+                background: 'none', border: 'none', color: 'var(--text-muted)',
+                cursor: 'pointer', fontSize: 11, fontWeight: 'bold'
               }}
+              title="Згорнути"
             >
-              <input
-                type="checkbox"
-                checked={isActive}
-                onChange={() => handleLayerToggle(layerKey)}
+              ✕
+            </button>
+          </div>
+          {Object.entries(LAYER_LABELS).map(([layerKey, label]) => {
+            const isActive = activeLayers[layerKey];
+            return (
+              <label
+                key={layerKey}
                 style={{
-                  accentColor: 'var(--accent)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  fontSize: 11,
+                  color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
                   cursor: 'pointer',
+                  userSelect: 'none',
+                  padding: '2px 0',
                 }}
-              />
-              {label}
-            </label>
-          );
-        })}
-      </div>
+              >
+                <input
+                  type="checkbox"
+                  checked={isActive}
+                  onChange={() => handleLayerToggle(layerKey)}
+                  style={{
+                    accentColor: 'var(--accent)',
+                    cursor: 'pointer',
+                  }}
+                />
+                {label}
+              </label>
+            );
+          })}
+        </div>
+      ) : (
+        <button
+          className="cs-glass-card"
+          onClick={() => setIsLayersPanelOpen(true)}
+          style={{
+            position: 'absolute', top: 56, right: 56, zIndex: 1000,
+            padding: '6px 12px', fontSize: 11, fontWeight: 700, color: 'var(--text-primary)',
+            cursor: 'pointer'
+          }}
+        >
+          🗺️ Шари карти
+        </button>
+      )}
 
       {/* Legend */}
-      <div
-        className="cs-glass-card cs-map-legend cs-desktop-only"
-        style={{
-          position: 'absolute',
-          bottom: 20,
-          right: 56,
-          left: 'auto',
-          padding: '12px 16px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 8,
-          zIndex: 1000,
-          background: 'var(--bg-card)',
-          backdropFilter: 'blur(16px)',
-          boxShadow: 'var(--shadow-card)',
-        }}
-      >
-        {Object.entries(CATEGORY_CONFIG).map(([k, cfg]) => (
-          <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, color: 'var(--text-secondary)' }}>
-            <div style={{ width: 10, height: 10, borderRadius: '50%', flexShrink: 0, background: cfg.markerColor, boxShadow: `0 0 6px ${cfg.markerColor}70` }} />
-            {cfg.label}
+      {isLegendOpen ? (
+        <div
+          className="cs-glass-card cs-map-legend cs-desktop-only"
+          style={{
+            position: 'absolute',
+            bottom: 20,
+            right: 56,
+            left: 'auto',
+            padding: '12px 16px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
+            zIndex: 1000,
+            background: 'var(--bg-card)',
+            backdropFilter: 'blur(16px)',
+            boxShadow: 'var(--shadow-card)',
+          }}
+        >
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', borderBottom: '1px solid var(--border-color)', paddingBottom: 4, position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>Категорії</span>
+            <button
+              onClick={() => setIsLegendOpen(false)}
+              style={{
+                background: 'none', border: 'none', color: 'var(--text-muted)',
+                cursor: 'pointer', fontSize: 11, fontWeight: 'bold'
+              }}
+              title="Згорнути"
+            >
+              ✕
+            </button>
           </div>
-        ))}
-      </div>
+          {Object.entries(CATEGORY_CONFIG).map(([k, cfg]) => (
+            <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, color: 'var(--text-secondary)' }}>
+              <div style={{ width: 10, height: 10, borderRadius: '50%', flexShrink: 0, background: cfg.markerColor, boxShadow: `0 0 6px ${cfg.markerColor}70` }} />
+              {cfg.label}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <button
+          className="cs-glass-card cs-desktop-only"
+          onClick={() => setIsLegendOpen(true)}
+          style={{
+            position: 'absolute', bottom: 20, right: 56, zIndex: 1000,
+            padding: '6px 12px', fontSize: 11, fontWeight: 700, color: 'var(--text-primary)',
+            cursor: 'pointer'
+          }}
+        >
+          🏷️ Категорії
+        </button>
+      )}
 
       {/* Zoom level info */}
       <div

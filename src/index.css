@@ -175,7 +175,7 @@ body {
 }
 
 .cs-feed__header {
-  padding: 24px 20px 20px;
+  padding: 24px 20px 0px 20px;
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
 }
@@ -293,17 +293,8 @@ body {
   font-size: 13px;
 }
 
-.cs-feed__title {
-  font-size: 16px;
-  font-weight: 800;
-  color: var(--text-primary);
-  margin-bottom: 4px;
-}
 
-.cs-feed__subtitle {
-  font-size: 12px;
-  color: var(--text-muted);
-}
+
 
 .cs-feed__metrics {
   padding: 16px 20px 0;
@@ -1807,7 +1798,9 @@ body {
 }
 
 /* ─── NEW CLEAN ANALYTICS GRID SYSTEM ──────────────── */
-.cs-an-top, .cs-an-main, .cs-an-bottom {
+.cs-an-top,
+.cs-an-main,
+.cs-an-bottom {
   box-sizing: border-box !important;
   max-width: 100% !important;
 }
@@ -1834,29 +1827,35 @@ body {
 }
 
 @media (max-width: 768px) {
-  .cs-an-top, .cs-an-main, .cs-an-bottom {
+
+  .cs-an-top,
+  .cs-an-main,
+  .cs-an-bottom {
     grid-template-columns: 1fr !important;
     gap: 16px !important;
     width: 100% !important;
     max-width: 100% !important;
   }
-  
+
   .cs-glass-card {
     min-width: 0 !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
   }
-  
+
   .cs-scroll-page {
     overflow-x: hidden !important;
   }
 }
 
 @media (max-width: 1024px) and (min-width: 769px) {
-  .cs-an-top, .cs-an-bottom {
+
+  .cs-an-top,
+  .cs-an-bottom {
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 16px !important;
   }
+
   .cs-an-main {
     grid-template-columns: 1fr !important;
     gap: 16px !important;
@@ -2015,29 +2014,35 @@ body {
     padding: 8px 8px;
     gap: 8px;
   }
+
   .cs-lb-avatar {
     width: 28px;
     height: 28px;
     font-size: 9px;
     border-radius: 8px;
   }
+
   .cs-lb-name {
     font-size: 12px;
   }
+
   .cs-lb-points {
     width: 60px;
     font-size: 12px;
   }
+
   .cs-lb-pos {
     width: 30px;
     font-size: 12px;
   }
+
   .cs-rank-banner {
     flex-direction: column;
     text-align: center;
     gap: 8px;
     padding: 14px 16px;
   }
+
   .cs-rank-banner__title {
     font-size: 13px;
   }
