@@ -1,8 +1,14 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
+const rankSuffix = (n: number) => {
+  if (n === 1) return '-му';
+  if (n >= 2 && n <= 4) return '-му';
+  return '-му';
+};
+
 const ProfileView: React.FC = () => {
-  const { user, loginSimulate, logoutSimulate } = useAuth();
+  const { user, loginSimulate, logoutSimulate, getUserRank } = useAuth();
   const [nameInput, setNameInput] = useState('');
 
   const handleLogin = (e: React.FormEvent) => {
@@ -57,6 +63,9 @@ const ProfileView: React.FC = () => {
           </div>
         ) : (
           <div className="cs-profile-grid">
+           
+            
+
             {/* Left: avatar & stats */}
             <div className="cs-profile-card">
               <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -81,7 +90,7 @@ const ProfileView: React.FC = () => {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span>Рейтинг міста:</span>
-                  <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>ТОП-15 активістів</span>
+                  <span style={{ fontWeight: 700, color: 'var(--accent)' }}>ТОП-{getUserRank()}</span>
                 </div>
               </div>
 
@@ -112,6 +121,17 @@ const ProfileView: React.FC = () => {
                     <span style={{ fontSize: 12, fontWeight: 900, color: '#10B981', flexShrink: 0 }}>+{h.points} б</span>
                   </div>
                 ))}
+              </div>
+            </div>
+            <div className="cs-rank-banner" style={{ gridColumn: '1 / -1' }}>
+              <div className="cs-rank-banner__icon">🏆</div>
+              <div>
+                <div className="cs-rank-banner__title">
+                  Ви на {getUserRank()}{rankSuffix(getUserRank())} місці в топі активістів міста!
+                </div>
+                <div className="cs-rank-banner__sub">
+                  Зберіть більше балів, подаючи звіти про проблеми
+                </div>
               </div>
             </div>
           </div>

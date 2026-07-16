@@ -171,7 +171,7 @@ const ReportView: React.FC<ReportViewProps> = ({ currentCity, cityIncidents, onA
       aiProcessed,
     };
 
-    if (user?.isLoggedIn) addPoints(10, `Інцидент: ${newIncident.title.slice(0, 30)}...`);
+    if (user?.isLoggedIn) addPoints(30, `Повідомлення про інцидент: +30 балів`);
     onAddIncident(cityId, newIncident);
     onNavigateToMap();
   };

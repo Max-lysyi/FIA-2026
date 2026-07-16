@@ -1,4 +1,12 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+
+/* ─── Types ─────────────────────────────────── */
+export interface MockUser {
+  id: string;
+  name: string;
+  points: number;
+  avatar: string; // 2-letter initials
+}
 
 export interface UserSession {
   name: string;
@@ -12,23 +20,64 @@ interface AuthContextType {
   loginSimulate: (name: string) => void;
   logoutSimulate: () => void;
   addPoints: (amount: number, reason: string) => void;
+  getMockUsers: () => MockUser[];
+  getUserRank: () => number;
 }
 
+/* ─── Mock database seed ──────────────────────── */
+const MOCK_NAMES = [
+  'Олександр Коваль', 'Марія Шевченко', 'Андрій Бондаренко', 'Ірина Ткаченко',
+  'Дмитро Мельник', 'Тетяна Кравченко', 'Василь Петренко', 'Юлія Романенко',
+  'Сергій Поліщук', 'Наталія Савченко', 'Михайло Литвиненко', 'Оксана Гончарук',
+  'Ігор Зайченко', 'Ольга Марченко', 'Богдан Руденко', 'Катерина Приходько',
+  'Віталій Сидоренко', 'Анна Дубовик', 'Роман Кузьменко', 'Людмила Тарасенко',
+];
+
+const LS_LEADERBOARD = 'citysense_leaderboard';
+const LS_USER = 'citysense_user';
+
+function generateMockUsers(): MockUser[] {
+  return MOCK_NAMES.map((name, i) => ({
+    id: `mock-${i}`,
+    name,
+    points: Math.floor(Math.random() * 451) + 50, // 50..500
+    avatar: name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2),
+  }));
+}
+
+function loadOrCreateMockUsers(): MockUser[] {
+  const saved = localStorage.getItem(LS_LEADERBOARD);
+  if (saved) {
+    try { return JSON.parse(saved); } catch { /* regenerate */ }
+  }
+  const users = generateMockUsers();
+  localStorage.setItem(LS_LEADERBOARD, JSON.stringify(users));
+  return users;
+}
+
+/* ─── Context ─────────────────────────────────── */
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserSession | null>(() => {
-    const saved = localStorage.getItem('citysense_user');
+    const saved = localStorage.getItem(LS_USER);
     return saved ? JSON.parse(saved) : null;
   });
 
+  // Ensure mock users exist on first mount
+  const [mockUsers] = useState<MockUser[]>(() => loadOrCreateMockUsers());
+
   useEffect(() => {
     if (user) {
-      localStorage.setItem('citysense_user', JSON.stringify(user));
+      localStorage.setItem(LS_USER, JSON.stringify(user));
     } else {
-      localStorage.removeItem('citysense_user');
+      localStorage.removeItem(LS_USER);
     }
   }, [user]);
+
+  useEffect(() => {
+    localStorage.setItem(LS_LEADERBOARD, JSON.stringify(mockUsers));
+  }, [mockUsers]);
 
   const loginSimulate = (name: string) => {
     setUser({
@@ -64,8 +113,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
+  const getMockUsers = useCallback((): MockUser[] => {
+    return mockUsers;
+  }, [mockUsers]);
+
+  const getUserRank = useCallback((): number => {
+    if (!user) return -1;
+    const allUsers = [...mockUsers, { id: 'current', name: user.name, points: user.points, avatar: '' }];
+    allUsers.sort((a, b) => b.points - a.points);
+    const idx = allUsers.findIndex(u => u.id === 'current');
+    return idx + 1; // 1-based rank
+  }, [mockUsers, user]);
+
   return (
-    <AuthContext.Provider value={{ user, loginSimulate, logoutSimulate, addPoints }}>
+    <AuthContext.Provider value={{ user, loginSimulate, logoutSimulate, addPoints, getMockUsers, getUserRank }}>
       {children}
     </AuthContext.Provider>
   );

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CATEGORY_CONFIG, type Incident } from '../data/incidents';
 import { IconAI, IconWarning, IconPin } from '../components/Icons';
 import { generateInsight } from '../lib/insights';
+import Leaderboard from '../components/Leaderboard';
 
 interface AnalyticsViewProps {
   incidents: Incident[];
@@ -318,6 +319,9 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
             </div>
           </div>
         </div>
+
+        {/* Leaderboard */}
+        <Leaderboard />
       </div>
     </div>
   );
