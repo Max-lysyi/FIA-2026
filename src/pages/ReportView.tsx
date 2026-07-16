@@ -189,7 +189,7 @@ const ReportView: React.FC<ReportViewProps> = ({ currentCity, cityIncidents, onA
         {/* Form container stacked vertically */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24, marginBottom: 32 }}>
           {/* 1. Location card */}
-          <div className="cs-form-card">
+          <div className="cs-form-card" style={{ position: 'relative', zIndex: 10 }}>
             <div className="cs-form-card__title">📍 Локація та Час</div>
 
             {/* Address with autocomplete */}
@@ -252,7 +252,7 @@ const ReportView: React.FC<ReportViewProps> = ({ currentCity, cityIncidents, onA
           </div>
 
           {/* 2. Location picker — click or drag the pin to mark the exact spot */}
-          <div className="cs-form-card">
+          <div className="cs-form-card" style={{ position: 'relative', zIndex: 1 }}>
             <div className="cs-form-card__title">🗺️ Точка на мапі</div>
             <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 14 }}>
               Клікніть на мапі або перетягніть маркер, щоб вказати точне місце проблеми

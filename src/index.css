@@ -985,7 +985,7 @@ body {
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  z-index: 500;
+  z-index: 50;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color-strong);
   border-radius: 14px;
