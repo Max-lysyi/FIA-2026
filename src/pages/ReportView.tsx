@@ -186,195 +186,190 @@ const ReportView: React.FC<ReportViewProps> = ({ currentCity, cityIncidents, onA
         <h1 className="cs-page-title">Повідомити про проблему</h1>
         <p className="cs-page-subtitle">Опишіть ситуацію, а ШІ зробить все інше</p>
 
-        {/* Form grid */}
-        <div className="cs-report-grid" style={{ marginBottom: 24 }}>
-          {/* Left column */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            {/* Location card */}
-            <div className="cs-form-card">
-              <div className="cs-form-card__title">📍 Локація та Час</div>
+        {/* Form container stacked vertically */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24, marginBottom: 32 }}>
+          {/* 1. Location card */}
+          <div className="cs-form-card">
+            <div className="cs-form-card__title">📍 Локація та Час</div>
 
-              {/* Address with autocomplete */}
-              <div style={{ position: 'relative' }}>
-                <label className="cs-form-label">Адреса ситуації</label>
-                <input
-                  className="cs-form-input"
-                  type="text"
-                  value={address}
-                  onChange={e => setAddress(e.target.value)}
-                  placeholder="вул. Проскурівська, 40"
-                />
-                {showSuggestions && (
-                  <div className="cs-suggestions">
-                    {filteredStreets.map(s => (
-                      <button
-                        key={s}
-                        className="cs-suggestion-item"
-                        onClick={() => { setAddress(s); setShowSuggestions(false); }}
-                      >
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* City & Time */}
-              <div className="cs-form-grid-2">
-                <div>
-                  <label className="cs-form-label">Місто</label>
-                  <select
-                    className="cs-form-select"
-                    value={cityId}
-                    onChange={e => {
-                      const next = CITIES.find(c => c.id === e.target.value);
-                      setCityId(e.target.value);
-                      if (next) setPoint({ lat: next.lat, lng: next.lng });
-                    }}
-                  >
-                    {CITIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="cs-form-label">Час виявлення</label>
-                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                    <input
-                      className="cs-form-input"
-                      style={{ paddingLeft: 34 }}
-                      type="text"
-                      value={timeFound}
-                      onChange={e => setTimeFound(e.target.value)}
-                    />
-                    <span style={{ position: 'absolute', left: 10, color: 'var(--text-muted)', pointerEvents: 'none' }}>
-                      <IconClock />
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Location picker — click or drag the pin to mark the exact spot */}
-            <div className="cs-form-card">
-              <div className="cs-form-card__title">🗺️ Точка на мапі</div>
-              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 10 }}>
-                Клікніть на мапі або перетягніть маркер, щоб вказати точне місце проблеми
-              </p>
-              <div style={{ width: '100%', height: 220, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border-color)' }}>
-                <LocationPicker lat={point.lat} lng={point.lng} zoom={14} onChange={(lat, lng) => setPoint({ lat, lng })} />
-              </div>
-              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
-                📍 {point.lat.toFixed(5)}, {point.lng.toFixed(5)}
-              </p>
-            </div>
-
-            {/* Media drag & drop */}
-            <div className="cs-form-card">
-              <div className="cs-form-card__title">📷 Фото того, що сталось</div>
-              <div
-                className="cs-dropzone"
-                onClick={() => document.getElementById('report-file-input')?.click()}
-              >
-                {photoPreview ? (
-                  <div style={{ width: '100%', height: 120, borderRadius: 10, overflow: 'hidden' }}>
-                    <img src={photoPreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  </div>
-                ) : (
-                  <>
-                    <IconUpload />
-                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>Перетягніть фото сюди</span>
-                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>або натисніть для вибору</span>
-                  </>
-                )}
-              </div>
-              <input id="report-file-input" type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
-            </div>
-          </div>
-
-          {/* Right column */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            {/* AI Description */}
-            <div className="cs-form-card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div className="cs-form-card__title">📝 Опис із ШІ-помічником</div>
-                <button
-                  onClick={runAiCopilot}
-                  disabled={isCopilotRunning || !description.trim()}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 6,
-                    padding: '6px 14px', borderRadius: 50,
-                    fontSize: 11, fontWeight: 700,
-                    background: 'rgba(0,242,254,0.12)',
-                    border: '1px solid rgba(0,242,254,0.3)',
-                    color: 'var(--accent)', cursor: 'pointer',
-                    opacity: isCopilotRunning || !description.trim() ? 0.6 : 1,
-                  }}
-                >
-                  <IconSparkles />
-                  {isCopilotRunning ? 'Обробка...' : 'Покращити опис'}
-                </button>
-              </div>
-              <textarea
-                className="cs-form-textarea"
-                value={description}
-                onChange={e => { setDescription(e.target.value); setAiProcessed(false); }}
-                placeholder="Опишіть своїми словами... (ШІ покращить та структурує опис)"
+            {/* Address with autocomplete */}
+            <div style={{ position: 'relative' }}>
+              <label className="cs-form-label">Адреса ситуації</label>
+              <input
+                className="cs-form-input"
+                type="text"
+                value={address}
+                onChange={e => setAddress(e.target.value)}
+                placeholder="вул. Проскурівська, 40"
               />
-              <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                💡 Натисніть кнопку ШІ, щоб збагатити опис для комунальних служб
-              </p>
-              {aiError && (
-                <p style={{ fontSize: 11, color: '#EF4444' }}>⚠️ Помилка ШІ: {aiError}</p>
+              {showSuggestions && (
+                <div className="cs-suggestions">
+                  {filteredStreets.map(s => (
+                    <button
+                      key={s}
+                      className="cs-suggestion-item"
+                      onClick={() => { setAddress(s); setShowSuggestions(false); }}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
 
-            {/* AI Classification — hybrid editable */}
-            <div className="cs-ai-card">
-              <div className="cs-ai-card__accent" />
-              <div className="cs-ai-card__title">🤖 ШІ-класифікація (редагується)</div>
-
-              <div className="cs-form-grid-2">
-                <div>
-                  <label className="cs-form-label">Категорія проблеми</label>
-                  <select
-                    className="cs-form-select"
-                    value={category}
-                    onChange={e => setCategory(e.target.value as keyof typeof CATEGORY_CONFIG)}
-                    style={{ color: CATEGORY_CONFIG[category].color }}
-                  >
-                    {Object.entries(CATEGORY_CONFIG).map(([key, cfg]) => (
-                      <option key={key} value={key}>{cfg.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="cs-form-label">Маршрутизація</label>
-                  <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginTop: 8 }}>{aiDept}</p>
+            {/* City & Time */}
+            <div className="cs-form-grid-2">
+              <div>
+                <label className="cs-form-label">Місто</label>
+                <select
+                  className="cs-form-select"
+                  value={cityId}
+                  onChange={e => {
+                    const next = CITIES.find(c => c.id === e.target.value);
+                    setCityId(e.target.value);
+                    if (next) setPoint({ lat: next.lat, lng: next.lng });
+                  }}
+                >
+                  {CITIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="cs-form-label">Час виявлення</label>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <input
+                    className="cs-form-input"
+                    style={{ paddingLeft: 34 }}
+                    type="text"
+                    value={timeFound}
+                    onChange={e => setTimeFound(e.target.value)}
+                  />
+                  <span style={{ position: 'absolute', left: 10, color: 'var(--text-muted)', pointerEvents: 'none' }}>
+                    <IconClock />
+                  </span>
                 </div>
               </div>
+            </div>
+          </div>
 
-              {/* Urgency — fully manual */}
+          {/* 2. Location picker — click or drag the pin to mark the exact spot */}
+          <div className="cs-form-card">
+            <div className="cs-form-card__title">🗺️ Точка на мапі</div>
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 14 }}>
+              Клікніть на мапі або перетягніть маркер, щоб вказати точне місце проблеми
+            </p>
+            <div style={{ width: '100%', height: 300, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+              <LocationPicker lat={point.lat} lng={point.lng} zoom={14} onChange={(lat, lng) => setPoint({ lat, lng })} />
+            </div>
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 10 }}>
+              📍 {point.lat.toFixed(5)}, {point.lng.toFixed(5)}
+            </p>
+          </div>
+
+          {/* 3. Media drag & drop */}
+          <div className="cs-form-card">
+            <div className="cs-form-card__title">📷 Фото того, що сталось</div>
+            <div
+              className="cs-dropzone"
+              onClick={() => document.getElementById('report-file-input')?.click()}
+              style={{ marginTop: 10 }}
+            >
+              {photoPreview ? (
+                <div style={{ width: '100%', height: 180, borderRadius: 10, overflow: 'hidden' }}>
+                  <img src={photoPreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+              ) : (
+                <>
+                  <IconUpload />
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginTop: 8 }}>Перетягніть фото сюди</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>або натисніть для вибору</span>
+                </>
+              )}
+            </div>
+            <input id="report-file-input" type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
+          </div>
+
+          {/* 4. AI Description */}
+          <div className="cs-form-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <div className="cs-form-card__title">📝 Опис із ШІ-помічником</div>
+              <button
+                onClick={runAiCopilot}
+                disabled={isCopilotRunning || !description.trim()}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '6px 14px', borderRadius: 50,
+                  fontSize: 11, fontWeight: 700,
+                  background: 'rgba(0,242,254,0.12)',
+                  border: '1px solid rgba(0,242,254,0.3)',
+                  color: 'var(--accent)', cursor: 'pointer',
+                  opacity: isCopilotRunning || !description.trim() ? 0.6 : 1,
+                }}
+              >
+                <IconSparkles />
+                {isCopilotRunning ? 'Обробка...' : 'Покращити опис'}
+              </button>
+            </div>
+            <textarea
+              className="cs-form-textarea"
+              value={description}
+              onChange={e => { setDescription(e.target.value); setAiProcessed(false); }}
+              placeholder="Опишіть своїми словами... (ШІ покращить та структурує опис)"
+            />
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
+              💡 Натисніть кнопку ШІ, щоб збагатити опис для комунальних служб
+            </p>
+            {aiError && (
+              <p style={{ fontSize: 11, color: '#EF4444', marginTop: 6 }}>⚠️ Помилка ШІ: {aiError}</p>
+            )}
+          </div>
+
+          {/* 5. AI Classification — hybrid editable */}
+          <div className="cs-ai-card">
+            <div className="cs-ai-card__accent" />
+            <div className="cs-ai-card__title">🤖 ШІ-класифікація (редагується)</div>
+
+            <div className="cs-form-grid-2">
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-                  <label className="cs-form-label" style={{ marginBottom: 0 }}>Рівень екстреності</label>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: urgencyColor }}>{urgency} / 5</span>
-                </div>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  {urgencyBars.map(step => (
-                    <button
-                      key={step}
-                      onClick={() => setUrgency(step)}
-                      style={{
-                        flex: 1, height: 8, borderRadius: 4, border: 'none', cursor: 'pointer',
-                        background: step <= urgency ? urgencyColor : 'var(--border-color-strong)',
-                        transition: 'background 0.2s ease',
-                      }}
-                    />
+                <label className="cs-form-label">Категорія проблеми</label>
+                <select
+                  className="cs-form-select"
+                  value={category}
+                  onChange={e => setCategory(e.target.value as keyof typeof CATEGORY_CONFIG)}
+                  style={{ color: CATEGORY_CONFIG[category].color }}
+                >
+                  {Object.entries(CATEGORY_CONFIG).map(([key, cfg]) => (
+                    <option key={key} value={key}>{cfg.label}</option>
                   ))}
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-muted)', marginTop: 6 }}>
-                  <span>Низький</span>
-                  <span>Критичний</span>
-                </div>
+                </select>
+              </div>
+              <div>
+                <label className="cs-form-label">Маршрутизація</label>
+                <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginTop: 8 }}>{aiDept}</p>
+              </div>
+            </div>
+
+            {/* Urgency — fully manual */}
+            <div style={{ marginTop: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                <label className="cs-form-label" style={{ marginBottom: 0 }}>Рівень екстреності</label>
+                <span style={{ fontSize: 12, fontWeight: 700, color: urgencyColor }}>{urgency} / 5</span>
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {urgencyBars.map(step => (
+                  <button
+                    key={step}
+                    onClick={() => setUrgency(step)}
+                    style={{
+                      flex: 1, height: 8, borderRadius: 4, border: 'none', cursor: 'pointer',
+                      background: step <= urgency ? urgencyColor : 'var(--border-color-strong)',
+                      transition: 'background 0.2s ease',
+                    }}
+                  />
+                ))}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-muted)', marginTop: 6 }}>
+                <span>Низький</span>
+                <span>Критичний</span>
               </div>
             </div>
           </div>

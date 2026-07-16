@@ -179,7 +179,7 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
         </div>
 
         {/* Top metrics */}
-        <div className="cs-analytics-top-grid" style={{ marginBottom: 24 }}>
+        <div className="cs-an-top" style={{ marginBottom: 24 }}>
           {topMetrics.map((m, i) => (
             <div
               key={i}
@@ -211,7 +211,7 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
         </div>
 
         {/* Main grid */}
-        <div className="cs-analytics-main-grid" style={{ marginBottom: 16}}>
+        <div className="cs-an-main" style={{ marginBottom: 16}}>
           {/* Pie */}
           <div className="cs-glass-card" style={{ padding: 20 }}>
             <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16 }}>Розподіл за категоріями</h3>
@@ -267,7 +267,7 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
         </div>
 
         {/* Bottom grid */}
-        <div className="cs-analytics-bottom-grid">
+        <div className="cs-an-bottom">
           {/* Resolution times */}
           <div className="cs-glass-card" style={{ padding: 20 }}>
             <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16 }}>Середній час вирішення (хв)</h3>
