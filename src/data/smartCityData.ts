@@ -147,6 +147,7 @@ const WEATHER_TEMPLATES: Record<string, WeatherData> = {
 
 // ── Base Sensors Layout with Oscillations and Spatial Offsets ────────────────
 const getBaseSensors = (cityId: string, city: City, tick: number): Sensor[] => {
+  console.log(city);
   if (cityId === 'vinnytsia') {
     const aqi = Math.round(oscillate(42, 3, 2, tick));
     const ph = Number(oscillate(6.4, 0.15, 3, tick).toFixed(2));
@@ -457,6 +458,7 @@ const getBaseSensors = (cityId: string, city: City, tick: number): Sensor[] => {
 
 // ── Base Danger Zones Layout with mild offsets ───────────────────────────────
 const getBaseZones = (cityId: string, city: City): DangerZone[] => {
+  console.log(city);
   if (cityId === 'vinnytsia') {
     return [
       {

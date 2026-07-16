@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CATEGORY_CONFIG, type Incident } from '../data/incidents';
 import { IconAI, IconWarning, IconPin } from '../components/Icons';
 import { generateInsight } from '../lib/insights';
+import Leaderboard from '../components/Leaderboard';
 
 interface AnalyticsViewProps {
   incidents: Incident[];
@@ -139,7 +140,7 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
 
   return (
     <div className="cs-scroll-page">
-      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+      <div style={{  margin: '0 auto' }}>
         <h1 className="cs-page-title">Аналітика</h1>
         <p className="cs-page-subtitle">AI-прооброблений канал пайплайн</p>
 
@@ -179,7 +180,7 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
         </div>
 
         {/* Top metrics */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
+        <div className="cs-an-top" style={{ marginBottom: 24 }}>
           {topMetrics.map((m, i) => (
             <div
               key={i}
@@ -211,7 +212,7 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
         </div>
 
         {/* Main grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 16, marginBottom: 16 }}>
+        <div className="cs-an-main" style={{ marginBottom: 16}}>
           {/* Pie */}
           <div className="cs-glass-card" style={{ padding: 20 }}>
             <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16 }}>Розподіл за категоріями</h3>
@@ -267,7 +268,7 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
         </div>
 
         {/* Bottom grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+        <div className="cs-an-bottom">
           {/* Resolution times */}
           <div className="cs-glass-card" style={{ padding: 20 }}>
             <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16 }}>Середній час вирішення (хв)</h3>
@@ -318,6 +319,9 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
             </div>
           </div>
         </div>
+
+        {/* Leaderboard */}
+        <Leaderboard />
       </div>
     </div>
   );

@@ -12,7 +12,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
-const TILE_DARK  = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+const TILE_DARK = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
 const TILE_LIGHT = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
 
 // ── Clustering logic ──────────────────────────────────────────────────────
@@ -21,7 +21,7 @@ const TILE_LIGHT = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.p
 // At high zoom (>= 15): individual markers
 
 const ZOOM_SINGLE_CLUSTER = 11; // below this: one blue dot for everything
-const ZOOM_INDIVIDUAL     = 15; // at or above this: individual dots
+const ZOOM_INDIVIDUAL = 15; // at or above this: individual dots
 
 function getRadius(zoom: number): number {
   // Keep halving past zoom 15 instead of flattening out, so incidents that
@@ -248,7 +248,7 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
     L.control.zoom({ position: 'topright' }).addTo(map);
     L.control.attribution({ position: 'bottomright', prefix: '© CitySense' }).addTo(map);
     const tile = L.tileLayer(isDark ? TILE_DARK : TILE_LIGHT, { maxZoom: 19 }).addTo(map);
-    tileRef.current     = tile;
+    tileRef.current = tile;
     markersGroup.current = L.layerGroup().addTo(map);
     heatGroup.current    = L.layerGroup().addTo(map);
     sensorsGroup.current = L.layerGroup().addTo(map);
@@ -280,13 +280,13 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
       const intensity = Math.min(inc.complaintsCount / 15, 1);
       const r = 80 + inc.complaintsCount * 10;
       L.circle([inc.lat, inc.lng], { radius: r * 2.2, color: 'transparent', fillColor: cfg.markerColor, fillOpacity: 0.04 + intensity * 0.06, weight: 0 }).addTo(hg);
-      L.circle([inc.lat, inc.lng], { radius: r,       color: 'transparent', fillColor: cfg.markerColor, fillOpacity: 0.10 + intensity * 0.16, weight: 0 }).addTo(hg);
+      L.circle([inc.lat, inc.lng], { radius: r, color: 'transparent', fillColor: cfg.markerColor, fillOpacity: 0.10 + intensity * 0.16, weight: 0 }).addTo(hg);
     });
   }, [incidents, zoom]);
 
   // Markers — re-draw whenever zoom changes or incidents change
   const drawMarkers = useCallback(() => {
-    const mg  = markersGroup.current;
+    const mg = markersGroup.current;
     const map = mapRef.current;
     if (!mg || !map) return;
     mg.clearLayers();
@@ -328,7 +328,7 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
     }
 
     // ── CASE 2: Medium & high zoom — proper clustering ──
-    const radius   = getRadius(currentZoom);
+    const radius = getRadius(currentZoom);
     const clusters = clusterIncidents(incidents, radius);
 
     clusters.forEach(cluster => {
@@ -360,7 +360,7 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
             <style>
               @keyframes m-pulse {
                 0%,100% { transform:scale(1); box-shadow:0 0 ${baseSize}px ${cfg.markerColor}80; }
-                50%      { transform:scale(1.35); box-shadow:0 0 ${baseSize*2}px ${cfg.markerColor}; }
+                50%      { transform:scale(1.35); box-shadow:0 0 ${baseSize * 2}px ${cfg.markerColor}; }
               }
             </style>`,
           className: '',
@@ -389,9 +389,9 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
         // ── Cluster bubble ──
         const catCounts: Partial<Record<string, number>> = {};
         cluster.forEach(inc => { catCounts[inc.category] = (catCounts[inc.category] ?? 0) + inc.complaintsCount; });
-        const dom = Object.entries(catCounts).sort((a, b) => (b[1]??0) - (a[1]??0))[0][0] as keyof typeof CATEGORY_CONFIG;
+        const dom = Object.entries(catCounts).sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))[0][0] as keyof typeof CATEGORY_CONFIG;
         const color = CATEGORY_CONFIG[dom].markerColor;
-        const size  = Math.min(72, 36 + cluster.length * 6);
+        const size = Math.min(72, 36 + cluster.length * 6);
         const fontSize = size < 46 ? 12 : size < 58 ? 14 : 17;
 
         const icon = L.divIcon({

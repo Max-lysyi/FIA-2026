@@ -2,13 +2,13 @@ import React from 'react';
 import CSLogo from './CSLogo';
 import ThemeToggle from './ThemeToggle';
 import {
-  IconDashboard, IconMap, IconAnalytics, IconSettings, IconUser, IconSearch,
+  IconDashboard, IconMap, IconAnalytics, IconSettings, IconUser,
 } from './Icons';
 
 const IconReport: React.FC<{ size?: number; color?: string }> = ({ size = 20, color = 'currentColor' }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-    <polyline points="9 22 9 12 15 12 15 22" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    <polyline points="9 22 9 12 15 12 15 22" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 
@@ -64,10 +64,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange, isFeedOpen,
 
         <NavBtn isActive={activeView === 'analytics'} onClick={() => onViewChange('analytics')} label="Аналітика">
           <IconAnalytics size={20} color={activeView === 'analytics' ? '#00F2FE' : 'var(--text-muted)'} />
-        </NavBtn>
-
-        <NavBtn isActive={false} onClick={() => {}} label="Пошук">
-          <IconSearch size={20} color="var(--text-muted)" />
         </NavBtn>
       </nav>
 

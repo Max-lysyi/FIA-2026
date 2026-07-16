@@ -61,6 +61,8 @@ const MetricsBar: React.FC<MetricsBarProps> = ({ incidents }) => {
                     display: 'inline-block',
                     width: 7,
                     height: 7,
+                    marginLeft: 5,
+                    marginBottom: 2,
                     borderRadius: '50%',
                     background: m.color,
                     boxShadow: `0 0 6px ${m.color}`,

@@ -20,7 +20,7 @@ const CityModal: React.FC<CityModalProps> = ({ isOpen, currentCityId, onSelect, 
   if (!isOpen) return null;
 
   return (
-    <>
+    <div className='cs-city-modal-container'>
       {/* Overlay — always on top of Leaflet */}
       <div className="cs-city-modal-overlay" onClick={onClose} />
 
@@ -122,7 +122,7 @@ const CityModal: React.FC<CityModalProps> = ({ isOpen, currentCityId, onSelect, 
           🤖 ШІ аналізує інциденти кожного міста окремо
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
