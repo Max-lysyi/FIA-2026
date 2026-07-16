@@ -3,6 +3,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { CATEGORY_CONFIG, type Incident, type City } from '../data/incidents';
 import { useTheme } from '../context/ThemeContext';
+import { getSmartCityData, ZONE_LEVEL_LABELS, type Sensor, type DangerZone } from '../data/smartCityData';
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -128,6 +129,71 @@ function buildPopupHtml(inc: Incident): string {
     </div>`;
 }
 
+function buildSensorTooltipHtml(sensor: Sensor, statusColor: string, statusLabel: string): string {
+  return `
+    <div class="cs-map-tip">
+      <div class="cs-map-tip__title">${escapeHtml(sensor.name)}</div>
+      <div class="cs-map-tip__row">
+        <span class="cs-map-tip__badge" style="background:${statusColor}22;color:${statusColor};border-color:${statusColor}55">${statusLabel}</span>
+      </div>
+      <div class="cs-map-tip__meta">Показник: <strong>${escapeHtml(sensor.value)}</strong></div>
+    </div>`;
+}
+
+function buildSensorPopupHtml(sensor: Sensor, statusColor: string, statusLabel: string): string {
+  const typeLabels: Record<string, string> = {
+    air: 'Якість повітря',
+    water: 'Якість води',
+    storm: 'Рівень зливової системи',
+    temp: 'Температура та вологість',
+    noise: 'Рівень шуму'
+  };
+  return `
+    <div class="cs-map-popup">
+      <div class="cs-map-popup__title">📡 ${escapeHtml(sensor.name)}</div>
+      <div class="cs-map-popup__location">Тип: ${typeLabels[sensor.type] || sensor.type}</div>
+      <div class="cs-map-popup__badges">
+        <span class="cs-map-popup__badge" style="background:${statusColor}22;color:${statusColor};border-color:${statusColor}55">${statusLabel}</span>
+      </div>
+      <p class="cs-map-popup__desc" style="font-size: 11.5px; margin: 8px 0; font-style: italic; color: var(--text-secondary);">
+        <strong>🤖 ШІ-Коментар:</strong> ${escapeHtml(sensor.aiComment)}
+      </p>
+      <div class="cs-map-popup__meta">
+        <span>Показник: <strong>${escapeHtml(sensor.value)}</strong></span>
+        <span>Оновлено: ${escapeHtml(sensor.lastUpdated)}</span>
+      </div>
+    </div>`;
+}
+
+function buildZoneTooltipHtml(zone: DangerZone): string {
+  return `
+    <div class="cs-map-tip">
+      <div class="cs-map-tip__title">${escapeHtml(zone.name)}</div>
+      <div class="cs-map-tip__row">
+        <span class="cs-map-tip__badge" style="background:${zone.color}22;color:${zone.color};border-color:${zone.color}55">${ZONE_LEVEL_LABELS[zone.level]}</span>
+      </div>
+    </div>`;
+}
+
+function buildZonePopupHtml(zone: DangerZone): string {
+  return `
+    <div class="cs-map-popup" style="width: 270px;">
+      <div class="cs-map-popup__title">⚠️ ${escapeHtml(zone.name)}</div>
+      <div class="cs-map-popup__badges">
+        <span class="cs-map-popup__badge" style="background:${zone.color}22;color:${zone.color};border-color:${zone.color}55">${ZONE_LEVEL_LABELS[zone.level]}</span>
+      </div>
+      <div style="font-size: 12px; color: var(--text-primary); margin-bottom: 6px; line-height: 1.4;">
+        <strong>Причина:</strong> ${escapeHtml(zone.reasons)}
+      </div>
+      <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; line-height: 1.4;">
+        <strong>Наслідки:</strong> ${escapeHtml(zone.consequences)}
+      </div>
+      <div style="font-size: 11.5px; color: var(--accent); background: var(--accent-dim); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px; margin-top: 6px; line-height: 1.45;">
+        <strong>🤖 ШІ-Рекомендація:</strong> ${escapeHtml(zone.aiRecommendation)}
+      </div>
+    </div>`;
+}
+
 // ── Component ─────────────────────────────────────────────────────────────
 interface CityMapProps {
   selectedIncident: Incident | null;
@@ -142,9 +208,33 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
   const tileRef       = useRef<L.TileLayer | null>(null);
   const markersGroup  = useRef<L.LayerGroup | null>(null);
   const heatGroup     = useRef<L.LayerGroup | null>(null);
+  const sensorsGroup  = useRef<L.LayerGroup | null>(null);
+  const zonesGroup    = useRef<L.LayerGroup | null>(null);
   const markersById   = useRef<Map<string, L.Marker>>(new Map());
   const { isDark }    = useTheme();
   const [zoom, setZoom]               = useState(city.zoom);
+
+  const [activeLayers, setActiveLayers] = useState<Record<string, boolean>>({
+    all: true,
+    sensors: true,
+    air: true,
+    water: true,
+    weather: true,
+    zones: true,
+    incidents: true,
+  });
+
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTick(t => t + 1);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const { sensors, dangerZones } = React.useMemo(() => {
+    return getSmartCityData(city.id, city, incidents, tick);
+  }, [city, incidents, tick]);
 
   // Init map once
   useEffect(() => {
@@ -161,6 +251,8 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
     tileRef.current     = tile;
     markersGroup.current = L.layerGroup().addTo(map);
     heatGroup.current    = L.layerGroup().addTo(map);
+    sensorsGroup.current = L.layerGroup().addTo(map);
+    zonesGroup.current   = L.layerGroup().addTo(map);
     map.on('zoomend', () => setZoom(map.getZoom()));
     mapRef.current = map;
     return () => { map.remove(); mapRef.current = null; };
@@ -199,6 +291,8 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
     if (!mg || !map) return;
     mg.clearLayers();
     markersById.current.clear();
+
+    if (!activeLayers.incidents) return;
 
     const currentZoom = map.getZoom();
 
@@ -340,9 +434,102 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
         });
       }
     });
-  }, [incidents, onSelectIncident]);
+  }, [incidents, onSelectIncident, activeLayers.incidents]);
 
   useEffect(() => { drawMarkers(); }, [zoom, drawMarkers]);
+
+  // Draw sensors and danger zones
+  useEffect(() => {
+    const map = mapRef.current;
+    const sg = sensorsGroup.current;
+    const zg = zonesGroup.current;
+    if (!map || !sg || !zg) return;
+
+    sg.clearLayers();
+    zg.clearLayers();
+
+    // 1. Draw Danger Zones if enabled
+    if (activeLayers.zones) {
+      dangerZones.forEach(zone => {
+        // Filter out if specific type layer is off
+        if (zone.type === 'air' && !activeLayers.air) return;
+        if (zone.type === 'water' && !activeLayers.water) return;
+        if ((zone.type === 'storm' || zone.type === 'icing' || zone.type === 'heat') && !activeLayers.weather) return;
+
+        L.circle([zone.lat, zone.lng], {
+          radius: zone.radius,
+          color: zone.color,
+          fillColor: zone.color,
+          fillOpacity: 0.15,
+          weight: 1.5,
+          dashArray: '4, 4',
+        })
+        .bindTooltip(buildZoneTooltipHtml(zone), {
+          direction: 'top',
+          opacity: 1,
+          className: 'cs-map-tip-wrapper',
+        })
+        .bindPopup(buildZonePopupHtml(zone), {
+          className: 'cs-map-popup-wrapper',
+          maxWidth: 290,
+        })
+        .addTo(zg);
+      });
+    }
+
+    // 2. Draw Sensors if enabled
+    if (activeLayers.sensors) {
+      sensors.forEach(sensor => {
+        // Filter out if specific type layer is off
+        if (sensor.type === 'air' && !activeLayers.air) return;
+        if (sensor.type === 'water' && !activeLayers.water) return;
+        if ((sensor.type === 'storm' || sensor.type === 'temp' || sensor.type === 'noise') && !activeLayers.weather) return;
+
+        const statusColor = sensor.status === 'danger' ? '#EF4444' : sensor.status === 'warning' ? '#F59E0B' : '#10B981';
+        const statusLabel = sensor.status === 'danger' ? 'Небезпека' : sensor.status === 'warning' ? 'Попередження' : 'Норма';
+        const typeIcon = sensor.type === 'air' ? '🍃' : sensor.type === 'water' ? '💧' : sensor.type === 'storm' ? '🌧️' : sensor.type === 'temp' ? '🌡️' : '🔊';
+
+        const sensorIcon = L.divIcon({
+          html: `
+            <div style="
+              width: 32px; height: 32px;
+              background: ${statusColor};
+              border: 2px solid rgba(255,255,255,0.9);
+              border-radius: 50%;
+              display: flex; align-items: center; justify-content: center;
+              font-size: 15px;
+              box-shadow: 0 0 12px ${statusColor}cc;
+              cursor: pointer;
+              ${sensor.status === 'danger' ? 'animation: sensor-pulse 1.2s ease-in-out infinite;' : ''}
+            ">${typeIcon}</div>
+            <style>
+              @keyframes sensor-pulse {
+                0%, 100% { box-shadow: 0 0 12px ${statusColor}cc; transform: scale(1); }
+                50% { box-shadow: 0 0 20px ${statusColor}; transform: scale(1.1); }
+              }
+            </style>
+          `,
+          className: '',
+          iconSize: [32, 32],
+          iconAnchor: [16, 16],
+        });
+
+        L.marker([sensor.lat, sensor.lng], { icon: sensorIcon })
+          .bindTooltip(buildSensorTooltipHtml(sensor, statusColor, statusLabel), {
+            direction: 'top',
+            offset: [0, -16],
+            opacity: 1,
+            className: 'cs-map-tip-wrapper',
+          })
+          .bindPopup(buildSensorPopupHtml(sensor, statusColor, statusLabel), {
+            className: 'cs-map-popup-wrapper',
+            maxWidth: 290,
+            offset: [0, -16],
+          })
+          .addTo(sg);
+      });
+    }
+  }, [sensors, dangerZones, activeLayers, zoom]);
 
   // When an incident is selected from outside the map (e.g. the sidebar
   // feed), fly to it and — once individual markers exist at that zoom —
@@ -359,14 +546,112 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
     return () => clearTimeout(timer);
   }, [selectedIncident]);
 
+  const LAYER_LABELS: Record<string, string> = {
+    all: 'Усі об\'єкти',
+    sensors: 'Датчики 📡',
+    air: 'Якість повітря 🍃',
+    water: 'Якість води 💧',
+    weather: 'Погодні ризики ❄️',
+    zones: 'Небезпечні зони ⚠️',
+    incidents: 'Повідомлення 📋',
+  };
+
+  const handleLayerToggle = (key: string) => {
+    setActiveLayers(prev => {
+      let next = { ...prev, [key]: !prev[key] };
+      if (key === 'all') {
+        const val = !prev.all;
+        next = {
+          all: val,
+          sensors: val,
+          air: val,
+          water: val,
+          weather: val,
+          zones: val,
+          incidents: val,
+        };
+      } else {
+        const otherKeys = ['sensors', 'air', 'water', 'weather', 'zones', 'incidents'];
+        const allOn = otherKeys.every(k => next[k]);
+        next.all = allOn;
+      }
+      return next;
+    });
+  };
+
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
 
+      {/* Layer Switcher */}
+      <div
+        className="cs-glass-card"
+        style={{
+          position: 'absolute',
+          top: 56,
+          right: 56,
+          padding: '12px 14px',
+          zIndex: 1000,
+          width: '180px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 6,
+          background: 'var(--bg-card)',
+          backdropFilter: 'blur(16px)',
+          boxShadow: 'var(--shadow-card)',
+        }}
+      >
+        <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 4, color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)', paddingBottom: 4 }}>
+          🗺️ Шари карти
+        </div>
+        {Object.entries(LAYER_LABELS).map(([layerKey, label]) => {
+          const isActive = activeLayers[layerKey];
+          return (
+            <label
+              key={layerKey}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                fontSize: 11,
+                color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
+                cursor: 'pointer',
+                userSelect: 'none',
+                padding: '2px 0',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={isActive}
+                onChange={() => handleLayerToggle(layerKey)}
+                style={{
+                  accentColor: 'var(--accent)',
+                  cursor: 'pointer',
+                }}
+              />
+              {label}
+            </label>
+          );
+        })}
+      </div>
+
       {/* Legend */}
       <div
-        className="glass-card cs-map-legend"
-        style={{ position: 'absolute', bottom: 20, left: 20, padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8, zIndex: 10 }}
+        className="cs-glass-card cs-map-legend cs-desktop-only"
+        style={{
+          position: 'absolute',
+          bottom: 20,
+          right: 56,
+          left: 'auto',
+          padding: '12px 16px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
+          zIndex: 1000,
+          background: 'var(--bg-card)',
+          backdropFilter: 'blur(16px)',
+          boxShadow: 'var(--shadow-card)',
+        }}
       >
         {Object.entries(CATEGORY_CONFIG).map(([k, cfg]) => (
           <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, color: 'var(--text-secondary)' }}>
@@ -378,8 +663,19 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
 
       {/* Zoom level info */}
       <div
-        className="glass-card"
-        style={{ position: 'absolute', top: 16, right: 56, padding: '6px 12px', fontSize: 11, zIndex: 10, color: 'var(--text-muted)' }}
+        className="cs-glass-card"
+        style={{
+          position: 'absolute',
+          top: 16,
+          right: 56,
+          padding: '6px 12px',
+          fontSize: 11,
+          zIndex: 1000,
+          color: 'var(--text-muted)',
+          background: 'var(--bg-card)',
+          backdropFilter: 'blur(16px)',
+          boxShadow: 'var(--shadow-card)',
+        }}
       >
         {zoom < ZOOM_SINGLE_CLUSTER ? '🔵 Загальний кластер' : zoom >= ZOOM_INDIVIDUAL ? '📍 Окремі маркери' : `🔢 Кластери (zoom ${zoom})`}
       </div>
