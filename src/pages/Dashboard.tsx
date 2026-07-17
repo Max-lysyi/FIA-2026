@@ -53,6 +53,8 @@ const Dashboard: React.FC = () => {
   const [isSmartPanelOpen, setIsSmartPanelOpen] = useState(true);
   const [isStatePanelOpen, setIsStatePanelOpen] = useState(true);
   const [isWeatherPanelOpen, setIsWeatherPanelOpen] = useState(true);
+  const [isLayersPanelOpen, setIsLayersPanelOpen] = useState(true);
+  const [isLegendOpen, setIsLegendOpen] = useState(true);
 
   const [tick, setTick] = useState(0);
   useEffect(() => {
@@ -110,7 +112,6 @@ const Dashboard: React.FC = () => {
   };
 
   const FEED_WIDTH = 308;
-  const criticalCount = incidents.filter(i => i.priority === 'critical').length;
 
   return (
     <div className="cs-app">
@@ -224,35 +225,44 @@ const Dashboard: React.FC = () => {
                 }}
               >
                 {[
-                  { label: 'Усього інцидентів', value: incidents.length * 18, color: 'var(--accent)', icon: '📋' },
-                  {
-                    label: 'Оброблено ШІ',
-                    value: `${incidents.length ? Math.round((incidents.filter(i => i.aiProcessed).length / incidents.length) * 100) : 0}%`,
-                    color: '#10B981', icon: '🤖',
-                  },
-                  { label: 'Критичні кризи', value: criticalCount, color: '#EF4444', icon: '⚠️' }
-                ].map((m, idx) => (
-                  <div
+                  { label: 'Стан міста', active: isStatePanelOpen, onClick: () => setIsStatePanelOpen(!isStatePanelOpen), icon: '🏢', color: 'var(--accent)' },
+                  { label: 'Погода', active: isWeatherPanelOpen, onClick: () => setIsWeatherPanelOpen(!isWeatherPanelOpen), icon: '🌤️', color: '#10B981' },
+                  { label: 'Шари карти', active: isLayersPanelOpen, onClick: () => setIsLayersPanelOpen(!isLayersPanelOpen), icon: '🗺️', color: '#A855F7' }
+                ].map((btn, idx) => (
+                  <button
                     key={idx}
+                    onClick={btn.onClick}
                     style={{
-                      background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(8px)',
-                      border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12,
-                      padding: '8px 10px', textAlign: 'center', pointerEvents: 'auto',
-                      boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+                      background: btn.active ? 'rgba(0, 242, 254, 0.15)' : 'rgba(15, 23, 42, 0.85)',
+                      backdropFilter: 'blur(8px)',
+                      border: btn.active ? '1px solid var(--accent)' : '1px solid rgba(255,255,255,0.08)',
+                      borderRadius: 12,
+                      padding: '10px 10px', textAlign: 'center', pointerEvents: 'auto',
+                      boxShadow: btn.active ? '0 0 12px rgba(0, 242, 254, 0.25)' : '0 4px 16px rgba(0,0,0,0.3)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 4,
+                      fontFamily: 'inherit',
+                      transition: 'all 0.2s ease',
+                      opacity: btn.active ? 1 : 0.65
                     }}
                   >
                     <span style={{ fontSize: 9, color: 'var(--text-secondary)', display: 'block', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      {m.icon} {m.label}
+                      {btn.icon} {btn.label}
                     </span>
-                    <strong style={{ fontSize: 13, color: m.color, marginTop: 4, display: 'block' }}>{m.value}</strong>
-                  </div>
+                    <strong style={{ fontSize: 11, color: btn.active ? btn.color : 'var(--text-muted)' }}>
+                      {btn.active ? 'ВІДКРИТО' : 'ЗАКРИТО'}
+                    </strong>
+                  </button>
                 ))}
               </div>
 
               {/* Desktop General State Panel */}
               {isStatePanelOpen ? (
                 <div
-                  className="cs-glass-card cs-desktop-only"
+                  className="cs-glass-card cs-map-widget cs-state-widget"
                   style={{
                     position: 'absolute',
                     top: 16,
@@ -271,7 +281,7 @@ const Dashboard: React.FC = () => {
                     <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Стан Міста</div>
                     <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--accent)', marginTop: 2 }}>{currentCity.name}</div>
                   </div>
-                  <div style={{ display: 'flex', gap: 20, paddingRight: 20 }}>
+                  <div className="cs-state-stats" style={{ display: 'flex', gap: 20, paddingRight: 20 }}>
                     {[
                       { label: 'Датчики 📡', value: stats.activeSensors, color: 'var(--text-primary)' },
                       { label: 'Зони ризику ⚠️', value: stats.dangerZonesCount, color: stats.dangerZonesCount > 0 ? '#F97316' : '#10B981' },
@@ -280,7 +290,7 @@ const Dashboard: React.FC = () => {
                       { label: 'Проблеми з водою 💧', value: stats.waterIssuesCount, color: stats.waterIssuesCount > 0 ? '#EF4444' : '#10B981' },
                       { label: 'Найвищий ризик 🛑', value: stats.highestRiskDistricts, color: 'var(--text-secondary)', maxWidth: 120 },
                     ].map((stat, idx) => (
-                      <div key={idx} style={{ minWidth: 60 }}>
+                      <div key={idx} style={{ minWidth: 60 }} className="cs-state-stat-item">
                         <div style={{ fontSize: 9, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{stat.label}</div>
                         <div style={{ fontSize: 12, fontWeight: 700, color: stat.color, marginTop: 2, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: stat.maxWidth || 'none' }}>
                           {stat.value}
@@ -302,7 +312,7 @@ const Dashboard: React.FC = () => {
                 </div>
               ) : (
                 <button
-                  className="cs-glass-card cs-desktop-only"
+                  className="cs-glass-card cs-map-widget cs-state-widget-collapsed"
                   onClick={() => setIsStatePanelOpen(true)}
                   style={{
                     position: 'absolute', top: 16, left: 16, zIndex: 1000,
@@ -317,7 +327,7 @@ const Dashboard: React.FC = () => {
               {/* Collapsible Smart City Panel (Weather + AI Analysis) */}
               {isWeatherPanelOpen ? (
                 <div
-                  className="cs-glass-card cs-desktop-only"
+                  className="cs-glass-card cs-map-widget cs-weather-widget"
                   style={{
                     position: 'absolute',
                     top: isStatePanelOpen ? 80 : 56,
@@ -497,7 +507,7 @@ const Dashboard: React.FC = () => {
                 </div>
               ) : (
                 <button
-                  className="cs-glass-card cs-desktop-only"
+                  className="cs-glass-card cs-map-widget cs-weather-widget-collapsed"
                   onClick={() => setIsWeatherPanelOpen(true)}
                   style={{
                     position: 'absolute',
@@ -519,6 +529,10 @@ const Dashboard: React.FC = () => {
                 city={currentCity}
                 selectedIncident={selectedIncident}
                 onSelectIncident={setSelectedIncident}
+                isLayersPanelOpen={isLayersPanelOpen}
+                isLegendOpen={isLegendOpen}
+                setIsLayersPanelOpen={setIsLayersPanelOpen}
+                setIsLegendOpen={setIsLegendOpen}
               />
             </div>
           )}

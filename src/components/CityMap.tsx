@@ -200,21 +200,32 @@ interface CityMapProps {
   onSelectIncident: (incident: Incident | null) => void;
   incidents: Incident[];
   city: City;
+  isLayersPanelOpen: boolean;
+  isLegendOpen: boolean;
+  setIsLayersPanelOpen: (open: boolean) => void;
+  setIsLegendOpen: (open: boolean) => void;
 }
 
-const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, incidents, city }) => {
-  const containerRef  = useRef<HTMLDivElement>(null);
-  const mapRef        = useRef<L.Map | null>(null);
-  const tileRef       = useRef<L.TileLayer | null>(null);
-  const markersGroup  = useRef<L.LayerGroup | null>(null);
-  const heatGroup     = useRef<L.LayerGroup | null>(null);
-  const sensorsGroup  = useRef<L.LayerGroup | null>(null);
-  const zonesGroup    = useRef<L.LayerGroup | null>(null);
-  const markersById   = useRef<Map<string, L.Marker>>(new Map());
-  const { isDark }    = useTheme();
-  const [zoom, setZoom]               = useState(city.zoom);
-  const [isLayersPanelOpen, setIsLayersPanelOpen] = useState(true);
-  const [isLegendOpen, setIsLegendOpen] = useState(true);
+const CityMap: React.FC<CityMapProps> = ({
+  selectedIncident,
+  onSelectIncident,
+  incidents,
+  city,
+  isLayersPanelOpen,
+  isLegendOpen,
+  setIsLayersPanelOpen,
+  setIsLegendOpen,
+}) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const tileRef = useRef<L.TileLayer | null>(null);
+  const markersGroup = useRef<L.LayerGroup | null>(null);
+  const heatGroup = useRef<L.LayerGroup | null>(null);
+  const sensorsGroup = useRef<L.LayerGroup | null>(null);
+  const zonesGroup = useRef<L.LayerGroup | null>(null);
+  const markersById = useRef<Map<string, L.Marker>>(new Map());
+  const { isDark } = useTheme();
+  const [zoom, setZoom] = useState(city.zoom);
 
   const [activeLayers, setActiveLayers] = useState<Record<string, boolean>>({
     all: true,
@@ -252,9 +263,9 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
     const tile = L.tileLayer(isDark ? TILE_DARK : TILE_LIGHT, { maxZoom: 19 }).addTo(map);
     tileRef.current = tile;
     markersGroup.current = L.layerGroup().addTo(map);
-    heatGroup.current    = L.layerGroup().addTo(map);
+    heatGroup.current = L.layerGroup().addTo(map);
     sensorsGroup.current = L.layerGroup().addTo(map);
-    zonesGroup.current   = L.layerGroup().addTo(map);
+    zonesGroup.current = L.layerGroup().addTo(map);
     map.on('zoomend', () => setZoom(map.getZoom()));
     mapRef.current = map;
     return () => { map.remove(); mapRef.current = null; };
@@ -466,16 +477,16 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
           weight: 1.5,
           dashArray: '4, 4',
         })
-        .bindTooltip(buildZoneTooltipHtml(zone), {
-          direction: 'top',
-          opacity: 1,
-          className: 'cs-map-tip-wrapper',
-        })
-        .bindPopup(buildZonePopupHtml(zone), {
-          className: 'cs-map-popup-wrapper',
-          maxWidth: 290,
-        })
-        .addTo(zg);
+          .bindTooltip(buildZoneTooltipHtml(zone), {
+            direction: 'top',
+            opacity: 1,
+            className: 'cs-map-tip-wrapper',
+          })
+          .bindPopup(buildZonePopupHtml(zone), {
+            className: 'cs-map-popup-wrapper',
+            maxWidth: 290,
+          })
+          .addTo(zg);
       });
     }
 
@@ -589,7 +600,7 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
       {/* Layers Panel */}
       {isLayersPanelOpen ? (
         <div
-          className="cs-glass-card"
+          className="cs-glass-card cs-layers-widget-panel cs-map-widget"
           style={{
             position: 'absolute',
             top: 56,
@@ -651,7 +662,7 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
         </div>
       ) : (
         <button
-          className="cs-glass-card"
+          className="cs-glass-card cs-desktop-only"
           onClick={() => setIsLayersPanelOpen(true)}
           style={{
             position: 'absolute', top: 56, right: 56, zIndex: 1000,
@@ -666,7 +677,7 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
       {/* Legend */}
       {isLegendOpen ? (
         <div
-          className="cs-glass-card cs-map-legend cs-desktop-only"
+          className="cs-glass-card cs-map-legend cs-map-widget"
           style={{
             position: 'absolute',
             bottom: 20,
@@ -704,7 +715,7 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
         </div>
       ) : (
         <button
-          className="cs-glass-card cs-desktop-only"
+          className="cs-glass-card cs-map-widget cs-legend-collapsed"
           onClick={() => setIsLegendOpen(true)}
           style={{
             position: 'absolute', bottom: 20, right: 56, zIndex: 1000,
@@ -718,7 +729,7 @@ const CityMap: React.FC<CityMapProps> = ({ selectedIncident, onSelectIncident, i
 
       {/* Zoom level info */}
       <div
-        className="cs-glass-card"
+        className="cs-glass-card cs-desktop-only"
         style={{
           position: 'absolute',
           top: 16,
